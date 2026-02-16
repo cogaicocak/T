@@ -1,413 +1,444 @@
-
 -- Services
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TeleportService = game:GetService("TeleportService") -- NEW
 
 -- Variables
 local LocalPlayer = Players.LocalPlayer
 
+-- NEW (Teleport config)
+local NEXT_PLACE_ID = 100117331123089
+local NoChestTime = 0
+local NoChestThreshold = 3 -- seconds (đảm bảo thật sự hết chest)
+local HasTeleported = false
+
 local function getCharacter()
-    if not LocalPlayer.Character then
-        LocalPlayer.CharacterAdded:Wait()
-    end
-    LocalPlayer.Character:WaitForChild("HumanoidRootPart")
-    return LocalPlayer.Character
+	if not LocalPlayer.Character then
+		LocalPlayer.CharacterAdded:Wait()
+	end
+	LocalPlayer.Character:WaitForChild("HumanoidRootPart")
+	return LocalPlayer.Character
 end
 
 -- Create GUI với hiệu ứng MONOCHROME CỰC ĐẸP
 local function createGui()
-    -- Xóa GUI cũ nếu có
-    local oldGui = LocalPlayer.PlayerGui:FindFirstChild("ChestFarmGUI")
-    if oldGui then
-        oldGui:Destroy()
-    end
-    
-    local gui = Instance.new("ScreenGui")
-    gui.Name = "ChestFarmGUI"
-    gui.IgnoreGuiInset = true
-    gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    gui.DisplayOrder = 999999
-    gui.ResetOnSpawn = false
-    gui.Parent = LocalPlayer.PlayerGui
-    
-    -- Background frame full screen
-    local background = Instance.new("Frame")
-    background.Name = "Background"
-    background.Parent = gui
-    background.BackgroundColor3 = Color3.fromRGB(8, 8, 8)
-    background.BackgroundTransparency = 1
-    background.Size = UDim2.new(1, 0, 1, 0)
-    background.Position = UDim2.new(0, 0, 0, 0)
-    background.BorderSizePixel = 0
-    
-    -- Container for centered content
-    local container = Instance.new("Frame")
-    container.Name = "Container"
-    container.Parent = background
-    container.Size = UDim2.new(0, 500, 0, 200)
-    container.Position = UDim2.new(0.5, 0, 0.5, 0)
-    container.AnchorPoint = Vector2.new(0.5, 0.5)
-    container.BackgroundTransparency = 1
-    
-    -- Glow effect layer (Background glow)
-    local glowFrame = Instance.new("Frame")
-    glowFrame.Name = "GlowFrame"
-    glowFrame.Parent = container
-    glowFrame.Size = UDim2.new(1, 40, 1, 40)
-    glowFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
-    glowFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-    glowFrame.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-    glowFrame.BackgroundTransparency = 1
-    glowFrame.ZIndex = 0
-    
-    local glowCorner = Instance.new("UICorner")
-    glowCorner.CornerRadius = UDim.new(0, 20)
-    glowCorner.Parent = glowFrame
-    
-    -- Content frame (Main container)
-    local contentFrame = Instance.new("Frame")
-    contentFrame.Name = "ContentFrame"
-    contentFrame.Parent = container
-    contentFrame.Size = UDim2.new(1, 0, 1, 0)
-    contentFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
-    contentFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-    contentFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
-    contentFrame.BackgroundTransparency = 1
-    contentFrame.ZIndex = 1
-    
-    local contentCorner = Instance.new("UICorner")
-    contentCorner.CornerRadius = UDim.new(0, 15)
-    contentCorner.Parent = contentFrame
-    
-    -- Subtle border line
-    local borderStroke = Instance.new("UIStroke")
-    borderStroke.Color = Color3.fromRGB(70, 70, 70)
-    borderStroke.Thickness = 1
-    borderStroke.Transparency = 1
-    borderStroke.Parent = contentFrame
-    
-    -- Animated line decoration (Top)
-    local topLine = Instance.new("Frame")
-    topLine.Name = "TopLine"
-    topLine.Parent = contentFrame
-    topLine.Size = UDim2.new(0, 0, 0, 2)
-    topLine.Position = UDim2.new(0.5, 0, 0.15, 0)
-    topLine.AnchorPoint = Vector2.new(0.5, 0.5)
-    topLine.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
-    topLine.BorderSizePixel = 0
-    topLine.ZIndex = 3
-    
-    local topGradient = Instance.new("UIGradient")
-    topGradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(50, 50, 50)),
-        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(180, 180, 180)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(50, 50, 50))
-    })
-    topGradient.Parent = topLine
-    
-    -- Main text
-    local mainText = Instance.new("TextLabel")
-    mainText.Name = "MainText"
-    mainText.Parent = contentFrame
-    mainText.Size = UDim2.new(0.9, 0, 0.35, 0)
-    mainText.Position = UDim2.new(0.5, 0, 0.38, 0)
-    mainText.AnchorPoint = Vector2.new(0.5, 0.5)
-    mainText.BackgroundTransparency = 1
-    mainText.Text = "Auto Farm Chest"
-    mainText.TextColor3 = Color3.fromRGB(240, 240, 240)
-    mainText.TextSize = 42
-    mainText.Font = Enum.Font.GothamBold
-    mainText.TextTransparency = 1
-    mainText.TextXAlignment = Enum.TextXAlignment.Center
-    mainText.TextYAlignment = Enum.TextYAlignment.Center
-    mainText.ZIndex = 3
-    
-    -- Text shadow effect
-    local shadowText = Instance.new("TextLabel")
-    shadowText.Name = "ShadowText"
-    shadowText.Parent = contentFrame
-    shadowText.Size = mainText.Size
-    shadowText.Position = UDim2.new(0.5, 2, 0.38, 2)
-    shadowText.AnchorPoint = Vector2.new(0.5, 0.5)
-    shadowText.BackgroundTransparency = 1
-    shadowText.Text = mainText.Text
-    shadowText.TextColor3 = Color3.fromRGB(0, 0, 0)
-    shadowText.TextSize = mainText.TextSize
-    shadowText.Font = mainText.Font
-    shadowText.TextTransparency = 1
-    shadowText.TextXAlignment = Enum.TextXAlignment.Center
-    shadowText.TextYAlignment = Enum.TextYAlignment.Center
-    shadowText.ZIndex = 2
-    
-    -- Credit text
-    local creditText = Instance.new("TextLabel")
-    creditText.Name = "CreditText"
-    creditText.Parent = contentFrame
-    creditText.Size = UDim2.new(0.9, 0, 0.2, 0)
-    creditText.Position = UDim2.new(0.5, 0, 0.7, 0)
-    creditText.AnchorPoint = Vector2.new(0.5, 0.5)
-    creditText.BackgroundTransparency = 1
-    creditText.Text = "made by VuongDacThong"
-    creditText.TextColor3 = Color3.fromRGB(150, 150, 150)
-    creditText.TextSize = 20
-    creditText.Font = Enum.Font.Gotham
-    creditText.TextTransparency = 1
-    creditText.TextXAlignment = Enum.TextXAlignment.Center
-    creditText.TextYAlignment = Enum.TextYAlignment.Center
-    creditText.ZIndex = 3
-    
-    -- Decorative dots
-    local dotsContainer = Instance.new("Frame")
-    dotsContainer.Name = "DotsContainer"
-    dotsContainer.Parent = contentFrame
-    dotsContainer.Size = UDim2.new(0.2, 0, 0.05, 0)
-    dotsContainer.Position = UDim2.new(0.5, 0, 0.88, 0)
-    dotsContainer.AnchorPoint = Vector2.new(0.5, 0.5)
-    dotsContainer.BackgroundTransparency = 1
-    dotsContainer.ZIndex = 3
-    
-    for i = 1, 3 do
-        local dot = Instance.new("Frame")
-        dot.Name = "Dot"..i
-        dot.Parent = dotsContainer
-        dot.Size = UDim2.new(0, 6, 0, 6)
-        dot.Position = UDim2.new((i-1) * 0.4 + 0.1, 0, 0.5, 0)
-        dot.AnchorPoint = Vector2.new(0.5, 0.5)
-        dot.BackgroundColor3 = Color3.fromRGB(120, 120, 120)
-        dot.BorderSizePixel = 0
-        dot.BackgroundTransparency = 1
-        
-        local dotCorner = Instance.new("UICorner")
-        dotCorner.CornerRadius = UDim.new(1, 0)
-        dotCorner.Parent = dot
-    end
-    
-    -- ===== ANIMATIONS - PURE MONOCHROME =====
-    
-    -- 1. SMOOTH FADE IN
-    task.spawn(function()
-        local fadeInfo = TweenInfo.new(1.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-        
-        TweenService:Create(background, fadeInfo, {BackgroundTransparency = 0.4}):Play()
-        TweenService:Create(contentFrame, fadeInfo, {BackgroundTransparency = 0.05}):Play()
-        TweenService:Create(borderStroke, fadeInfo, {Transparency = 0.6}):Play()
-        
-        task.wait(0.3)
-        TweenService:Create(mainText, fadeInfo, {TextTransparency = 0}):Play()
-        TweenService:Create(shadowText, fadeInfo, {TextTransparency = 0.8}):Play()
-        
-        task.wait(0.2)
-        TweenService:Create(creditText, fadeInfo, {TextTransparency = 0.4}):Play()
-    end)
-    
-    -- 2. GLOW PULSE (Xám nhẹ)
-    task.spawn(function()
-        task.wait(1)
-        while glowFrame and glowFrame.Parent do
-            local pulseInfo = TweenInfo.new(3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
-            
-            local glowIn = TweenService:Create(glowFrame, pulseInfo, {BackgroundTransparency = 0.9})
-            glowIn:Play()
-            glowIn.Completed:Wait()
-            
-            local glowOut = TweenService:Create(glowFrame, pulseInfo, {BackgroundTransparency = 1})
-            glowOut:Play()
-            glowOut.Completed:Wait()
-        end
-    end)
-    
-    -- 3. TOP LINE EXPAND ANIMATION
-    task.spawn(function()
-        task.wait(0.8)
-        local expandInfo = TweenInfo.new(1.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
-        TweenService:Create(topLine, expandInfo, {Size = UDim2.new(0.6, 0, 0, 2)}):Play()
-        
-        -- Line gradient flow
-        task.wait(1.5)
-        while topGradient and topGradient.Parent do
-            local flowInfo = TweenInfo.new(3, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut)
-            local flow = TweenService:Create(topGradient, flowInfo, {Offset = Vector2.new(1, 0)})
-            flow:Play()
-            flow.Completed:Wait()
-            topGradient.Offset = Vector2.new(-1, 0)
-        end
-    end)
-    
-    -- 4. TEXT SUBTLE BREATHING
-    task.spawn(function()
-        task.wait(2)
-        while mainText and mainText.Parent do
-            local breathInfo = TweenInfo.new(4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
-            
-            local breathOut = TweenService:Create(mainText, breathInfo, {
-                TextColor3 = Color3.fromRGB(200, 200, 200)
-            })
-            breathOut:Play()
-            breathOut.Completed:Wait()
-            
-            local breathIn = TweenService:Create(mainText, breathInfo, {
-                TextColor3 = Color3.fromRGB(240, 240, 240)
-            })
-            breathIn:Play()
-            breathIn.Completed:Wait()
-        end
-    end)
-    
-    -- 5. DOTS LOADING ANIMATION
-    task.spawn(function()
-        task.wait(1.5)
-        local dots = dotsContainer:GetChildren()
-        
-        while dotsContainer and dotsContainer.Parent do
-            for _, dot in ipairs(dots) do
-                if dot:IsA("Frame") then
-                    local fadeInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut)
-                    TweenService:Create(dot, fadeInfo, {BackgroundTransparency = 0.3}):Play()
-                    task.wait(0.15)
-                end
-            end
-            
-            task.wait(0.3)
-            
-            for _, dot in ipairs(dots) do
-                if dot:IsA("Frame") then
-                    local fadeInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut)
-                    TweenService:Create(dot, fadeInfo, {BackgroundTransparency = 1}):Play()
-                end
-            end
-            
-            task.wait(1)
-        end
-    end)
-    
-    -- 6. BORDER SUBTLE GLOW (Chỉ xám)
-    task.spawn(function()
-        task.wait(2.5)
-        while borderStroke and borderStroke.Parent do
-            local glowInfo = TweenInfo.new(5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
-            
-            local glowUp = TweenService:Create(borderStroke, glowInfo, {
-                Color = Color3.fromRGB(100, 100, 100),
-                Transparency = 0.4
-            })
-            glowUp:Play()
-            glowUp.Completed:Wait()
-            
-            local glowDown = TweenService:Create(borderStroke, glowInfo, {
-                Color = Color3.fromRGB(70, 70, 70),
-                Transparency = 0.6
-            })
-            glowDown:Play()
-            glowDown.Completed:Wait()
-        end
-    end)
-    
-    -- 7. CREDIT TEXT FADE PULSE
-    task.spawn(function()
-        task.wait(3)
-        while creditText and creditText.Parent do
-            local fadeInfo = TweenInfo.new(6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
-            
-            local fadeOut = TweenService:Create(creditText, fadeInfo, {TextTransparency = 0.7})
-            fadeOut:Play()
-            fadeOut.Completed:Wait()
-            
-            local fadeIn = TweenService:Create(creditText, fadeInfo, {TextTransparency = 0.4})
-            fadeIn:Play()
-            fadeIn.Completed:Wait()
-        end
-    end)
-    
-    print("✅ Pure Monochrome GUI loaded!")
-    return gui, mainText
+	-- Xóa GUI cũ nếu có
+	local oldGui = LocalPlayer.PlayerGui:FindFirstChild("ChestFarmGUI")
+	if oldGui then
+		oldGui:Destroy()
+	end
+
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "ChestFarmGUI"
+	gui.IgnoreGuiInset = true
+	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	gui.DisplayOrder = 999999
+	gui.ResetOnSpawn = false
+	gui.Parent = LocalPlayer.PlayerGui
+
+	-- Background frame full screen
+	local background = Instance.new("Frame")
+	background.Name = "Background"
+	background.Parent = gui
+	background.BackgroundColor3 = Color3.fromRGB(8, 8, 8)
+	background.BackgroundTransparency = 1
+	background.Size = UDim2.new(1, 0, 1, 0)
+	background.Position = UDim2.new(0, 0, 0, 0)
+	background.BorderSizePixel = 0
+
+	-- Container for centered content
+	local container = Instance.new("Frame")
+	container.Name = "Container"
+	container.Parent = background
+	container.Size = UDim2.new(0, 500, 0, 200)
+	container.Position = UDim2.new(0.5, 0, 0.5, 0)
+	container.AnchorPoint = Vector2.new(0.5, 0.5)
+	container.BackgroundTransparency = 1
+
+	-- Glow effect layer (Background glow)
+	local glowFrame = Instance.new("Frame")
+	glowFrame.Name = "GlowFrame"
+	glowFrame.Parent = container
+	glowFrame.Size = UDim2.new(1, 40, 1, 40)
+	glowFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+	glowFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+	glowFrame.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+	glowFrame.BackgroundTransparency = 1
+	glowFrame.ZIndex = 0
+
+	local glowCorner = Instance.new("UICorner")
+	glowCorner.CornerRadius = UDim.new(0, 20)
+	glowCorner.Parent = glowFrame
+
+	-- Content frame (Main container)
+	local contentFrame = Instance.new("Frame")
+	contentFrame.Name = "ContentFrame"
+	contentFrame.Parent = container
+	contentFrame.Size = UDim2.new(1, 0, 1, 0)
+	contentFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+	contentFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+	contentFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+	contentFrame.BackgroundTransparency = 1
+	contentFrame.ZIndex = 1
+
+	local contentCorner = Instance.new("UICorner")
+	contentCorner.CornerRadius = UDim.new(0, 15)
+	contentCorner.Parent = contentFrame
+
+	-- Subtle border line
+	local borderStroke = Instance.new("UIStroke")
+	borderStroke.Color = Color3.fromRGB(70, 70, 70)
+	borderStroke.Thickness = 1
+	borderStroke.Transparency = 1
+	borderStroke.Parent = contentFrame
+
+	-- Animated line decoration (Top)
+	local topLine = Instance.new("Frame")
+	topLine.Name = "TopLine"
+	topLine.Parent = contentFrame
+	topLine.Size = UDim2.new(0, 0, 0, 2)
+	topLine.Position = UDim2.new(0.5, 0, 0.15, 0)
+	topLine.AnchorPoint = Vector2.new(0.5, 0.5)
+	topLine.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
+	topLine.BorderSizePixel = 0
+	topLine.ZIndex = 3
+
+	local topGradient = Instance.new("UIGradient")
+	topGradient.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(50, 50, 50)),
+		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(180, 180, 180)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(50, 50, 50))
+	})
+	topGradient.Parent = topLine
+
+	-- Main text
+	local mainText = Instance.new("TextLabel")
+	mainText.Name = "MainText"
+	mainText.Parent = contentFrame
+	mainText.Size = UDim2.new(0.9, 0, 0.35, 0)
+	mainText.Position = UDim2.new(0.5, 0, 0.38, 0)
+	mainText.AnchorPoint = Vector2.new(0.5, 0.5)
+	mainText.BackgroundTransparency = 1
+	mainText.Text = "Auto Farm Chest"
+	mainText.TextColor3 = Color3.fromRGB(240, 240, 240)
+	mainText.TextSize = 42
+	mainText.Font = Enum.Font.GothamBold
+	mainText.TextTransparency = 1
+	mainText.TextXAlignment = Enum.TextXAlignment.Center
+	mainText.TextYAlignment = Enum.TextYAlignment.Center
+	mainText.ZIndex = 3
+
+	-- Text shadow effect
+	local shadowText = Instance.new("TextLabel")
+	shadowText.Name = "ShadowText"
+	shadowText.Parent = contentFrame
+	shadowText.Size = mainText.Size
+	shadowText.Position = UDim2.new(0.5, 2, 0.38, 2)
+	shadowText.AnchorPoint = Vector2.new(0.5, 0.5)
+	shadowText.BackgroundTransparency = 1
+	shadowText.Text = mainText.Text
+	shadowText.TextColor3 = Color3.fromRGB(0, 0, 0)
+	shadowText.TextSize = mainText.TextSize
+	shadowText.Font = mainText.Font
+	shadowText.TextTransparency = 1
+	shadowText.TextXAlignment = Enum.TextXAlignment.Center
+	shadowText.TextYAlignment = Enum.TextYAlignment.Center
+	shadowText.ZIndex = 2
+
+	-- Credit text
+	local creditText = Instance.new("TextLabel")
+	creditText.Name = "CreditText"
+	creditText.Parent = contentFrame
+	creditText.Size = UDim2.new(0.9, 0, 0.2, 0)
+	creditText.Position = UDim2.new(0.5, 0, 0.7, 0)
+	creditText.AnchorPoint = Vector2.new(0.5, 0.5)
+	creditText.BackgroundTransparency = 1
+	creditText.Text = "made by VuongDacThong"
+	creditText.TextColor3 = Color3.fromRGB(150, 150, 150)
+	creditText.TextSize = 20
+	creditText.Font = Enum.Font.Gotham
+	creditText.TextTransparency = 1
+	creditText.TextXAlignment = Enum.TextXAlignment.Center
+	creditText.TextYAlignment = Enum.TextYAlignment.Center
+	creditText.ZIndex = 3
+
+	-- Decorative dots
+	local dotsContainer = Instance.new("Frame")
+	dotsContainer.Name = "DotsContainer"
+	dotsContainer.Parent = contentFrame
+	dotsContainer.Size = UDim2.new(0.2, 0, 0.05, 0)
+	dotsContainer.Position = UDim2.new(0.5, 0, 0.88, 0)
+	dotsContainer.AnchorPoint = Vector2.new(0.5, 0.5)
+	dotsContainer.BackgroundTransparency = 1
+	dotsContainer.ZIndex = 3
+
+	for i = 1, 3 do
+		local dot = Instance.new("Frame")
+		dot.Name = "Dot" .. i
+		dot.Parent = dotsContainer
+		dot.Size = UDim2.new(0, 6, 0, 6)
+		dot.Position = UDim2.new((i - 1) * 0.4 + 0.1, 0, 0.5, 0)
+		dot.AnchorPoint = Vector2.new(0.5, 0.5)
+		dot.BackgroundColor3 = Color3.fromRGB(120, 120, 120)
+		dot.BorderSizePixel = 0
+		dot.BackgroundTransparency = 1
+
+		local dotCorner = Instance.new("UICorner")
+		dotCorner.CornerRadius = UDim.new(1, 0)
+		dotCorner.Parent = dot
+	end
+
+	-- ===== ANIMATIONS - PURE MONOCHROME =====
+
+	-- 1. SMOOTH FADE IN
+	task.spawn(function()
+		local fadeInfo = TweenInfo.new(1.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+
+		TweenService:Create(background, fadeInfo, { BackgroundTransparency = 0.4 }):Play()
+		TweenService:Create(contentFrame, fadeInfo, { BackgroundTransparency = 0.05 }):Play()
+		TweenService:Create(borderStroke, fadeInfo, { Transparency = 0.6 }):Play()
+
+		task.wait(0.3)
+		TweenService:Create(mainText, fadeInfo, { TextTransparency = 0 }):Play()
+		TweenService:Create(shadowText, fadeInfo, { TextTransparency = 0.8 }):Play()
+
+		task.wait(0.2)
+		TweenService:Create(creditText, fadeInfo, { TextTransparency = 0.4 }):Play()
+	end)
+
+	-- 2. GLOW PULSE (Xám nhẹ)
+	task.spawn(function()
+		task.wait(1)
+		while glowFrame and glowFrame.Parent do
+			local pulseInfo = TweenInfo.new(3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
+
+			local glowIn = TweenService:Create(glowFrame, pulseInfo, { BackgroundTransparency = 0.9 })
+			glowIn:Play()
+			glowIn.Completed:Wait()
+
+			local glowOut = TweenService:Create(glowFrame, pulseInfo, { BackgroundTransparency = 1 })
+			glowOut:Play()
+			glowOut.Completed:Wait()
+		end
+	end)
+
+	-- 3. TOP LINE EXPAND ANIMATION
+	task.spawn(function()
+		task.wait(0.8)
+		local expandInfo = TweenInfo.new(1.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+		TweenService:Create(topLine, expandInfo, { Size = UDim2.new(0.6, 0, 0, 2) }):Play()
+
+		-- Line gradient flow
+		task.wait(1.5)
+		while topGradient and topGradient.Parent do
+			local flowInfo = TweenInfo.new(3, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut)
+			local flow = TweenService:Create(topGradient, flowInfo, { Offset = Vector2.new(1, 0) })
+			flow:Play()
+			flow.Completed:Wait()
+			topGradient.Offset = Vector2.new(-1, 0)
+		end
+	end)
+
+	-- 4. TEXT SUBTLE BREATHING
+	task.spawn(function()
+		task.wait(2)
+		while mainText and mainText.Parent do
+			local breathInfo = TweenInfo.new(4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
+
+			local breathOut = TweenService:Create(mainText, breathInfo, {
+				TextColor3 = Color3.fromRGB(200, 200, 200)
+			})
+			breathOut:Play()
+			breathOut.Completed:Wait()
+
+			local breathIn = TweenService:Create(mainText, breathInfo, {
+				TextColor3 = Color3.fromRGB(240, 240, 240)
+			})
+			breathIn:Play()
+			breathIn.Completed:Wait()
+		end
+	end)
+
+	-- 5. DOTS LOADING ANIMATION
+	task.spawn(function()
+		task.wait(1.5)
+		local dots = dotsContainer:GetChildren()
+
+		while dotsContainer and dotsContainer.Parent do
+			for _, dot in ipairs(dots) do
+				if dot:IsA("Frame") then
+					local fadeInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut)
+					TweenService:Create(dot, fadeInfo, { BackgroundTransparency = 0.3 }):Play()
+					task.wait(0.15)
+				end
+			end
+
+			task.wait(0.3)
+
+			for _, dot in ipairs(dots) do
+				if dot:IsA("Frame") then
+					local fadeInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut)
+					TweenService:Create(dot, fadeInfo, { BackgroundTransparency = 1 }):Play()
+				end
+			end
+
+			task.wait(1)
+		end
+	end)
+
+	-- 6. BORDER SUBTLE GLOW (Chỉ xám)
+	task.spawn(function()
+		task.wait(2.5)
+		while borderStroke and borderStroke.Parent do
+			local glowInfo = TweenInfo.new(5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
+
+			local glowUp = TweenService:Create(borderStroke, glowInfo, {
+				Color = Color3.fromRGB(100, 100, 100),
+				Transparency = 0.4
+			})
+			glowUp:Play()
+			glowUp.Completed:Wait()
+
+			local glowDown = TweenService:Create(borderStroke, glowInfo, {
+				Color = Color3.fromRGB(70, 70, 70),
+				Transparency = 0.6
+			})
+			glowDown:Play()
+			glowDown.Completed:Wait()
+		end
+	end)
+
+	-- 7. CREDIT TEXT FADE PULSE
+	task.spawn(function()
+		task.wait(3)
+		while creditText and creditText.Parent do
+			local fadeInfo = TweenInfo.new(6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
+
+			local fadeOut = TweenService:Create(creditText, fadeInfo, { TextTransparency = 0.7 })
+			fadeOut:Play()
+			fadeOut.Completed:Wait()
+
+			local fadeIn = TweenService:Create(creditText, fadeInfo, { TextTransparency = 0.4 })
+			fadeIn:Play()
+			fadeIn.Completed:Wait()
+		end
+	end)
+
+	print("✅ Pure Monochrome GUI loaded!")
+	return gui, mainText
 end
 
 -- Chest detection and sorting
 local UncheckedChests, FirstRun = {}, true
 local function getChestsSorted()
-    if FirstRun then
-        FirstRun = false
-        for _, Object in pairs(game:GetDescendants()) do
-            if Object.Name:find("Chest") and Object.ClassName == "Part" then
-                table.insert(UncheckedChests, Object)
-            end
-        end
-    end
-    local Chests = {}
-    for _, Chest in pairs(UncheckedChests) do
-        if Chest:FindFirstChild("TouchInterest") then
-            table.insert(Chests, Chest)
-        end
-    end
-    
-    pcall(function()
-        local RootPart = getCharacter().HumanoidRootPart
-        table.sort(Chests, function(ChestA, ChestB)
-            local RootPos = RootPart.Position
-            local DistanceA = (RootPos - ChestA.Position).Magnitude
-            local DistanceB = (RootPos - ChestB.Position).Magnitude
-            return DistanceA < DistanceB
-        end)
-    end)
-    
-    return Chests
+	if FirstRun then
+		FirstRun = false
+		for _, Object in pairs(game:GetDescendants()) do
+			if Object.Name:find("Chest") and Object.ClassName == "Part" then
+				table.insert(UncheckedChests, Object)
+			end
+		end
+	end
+
+	local Chests = {}
+	for _, Chest in pairs(UncheckedChests) do
+		if Chest:FindFirstChild("TouchInterest") then
+			table.insert(Chests, Chest)
+		end
+	end
+
+	pcall(function()
+		local RootPart = getCharacter().HumanoidRootPart
+		table.sort(Chests, function(ChestA, ChestB)
+			local RootPos = RootPart.Position
+			local DistanceA = (RootPos - ChestA.Position).Magnitude
+			local DistanceB = (RootPos - ChestB.Position).Magnitude
+			return DistanceA < DistanceB
+		end)
+	end)
+
+	return Chests
 end
 
 -- Noclip toggle
 local function toggleNoclip(Toggle)
-    pcall(function()
-        for _, v in pairs(getCharacter():GetChildren()) do
-            if v:IsA("BasePart") then
-                v.CanCollide = not Toggle
-            end
-        end
-    end)
+	pcall(function()
+		for _, v in pairs(getCharacter():GetChildren()) do
+			if v:IsA("BasePart") then
+				v.CanCollide = not Toggle
+			end
+		end
+	end)
 end
 
 -- Teleport function
 local function Teleport(Goal)
-    pcall(function()
-        local RootPart = getCharacter().HumanoidRootPart
-        toggleNoclip(true)
-        RootPart.CFrame = Goal + Vector3.new(0, 3, 0)
-        toggleNoclip(false)
-    end)
+	pcall(function()
+		local RootPart = getCharacter().HumanoidRootPart
+		toggleNoclip(true)
+		RootPart.CFrame = Goal + Vector3.new(0, 3, 0)
+		toggleNoclip(false)
+	end)
+end
+
+-- NEW: Teleport to next place when all chests are cleared
+local function TeleportToNextPlace()
+	if HasTeleported then
+		return
+	end
+	HasTeleported = true
+
+	pcall(function()
+		TeleportService:Teleport(NEXT_PLACE_ID, LocalPlayer)
+	end)
 end
 
 -- Main farm loop
 local function startFarm()
-    task.spawn(function()
-        while task.wait(0.1) do
-            pcall(function()
-                local Chests = getChestsSorted()
-                if #Chests > 0 then
-                    Teleport(Chests[1].CFrame)
-                end
-            end)
-        end
-    end)
+	task.spawn(function()
+		while task.wait(0.1) do
+			pcall(function()
+				local Chests = getChestsSorted()
+
+				if #Chests > 0 then
+					NoChestTime = 0
+					Teleport(Chests[1].CFrame)
+				else
+					NoChestTime += 0.1
+					if NoChestTime >= NoChestThreshold then
+						TeleportToNextPlace()
+					end
+				end
+			end)
+		end
+	end)
 end
 
 -- Auto set team to Marines
 task.spawn(function()
-    while task.wait(5) do
-        pcall(function()
-            ReplicatedStorage.Remotes.CommF_:InvokeServer("SetTeam","Marines")
-        end)
-    end
+	while task.wait(5) do
+		pcall(function()
+			ReplicatedStorage.Remotes.CommF_:InvokeServer("SetTeam", "Marines")
+		end)
+	end
 end)
 
 -- Character added handler
 LocalPlayer.CharacterAdded:Connect(function()
-    task.wait(1)
-    pcall(startFarm)
+	task.wait(1)
+
+	-- NEW: reset state on respawn
+	NoChestTime = 0
+	HasTeleported = false
+
+	pcall(startFarm)
 end)
 
 -- Initialize
 print("🚀 Starting Monochrome Chest Farm Script...")
 pcall(function()
-    createGui()
-    startFarm()
+	createGui()
+	startFarm()
 end)
