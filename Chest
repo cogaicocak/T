@@ -1,0 +1,197 @@
+-- Services
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+
+-- Variables
+local player = Players.LocalPlayer
+
+-- Hàm tạo giao diện
+local function createGui()
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "C"..tostring(math.random(1000, 9999))
+    gui.IgnoreGuiInset = true
+    gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    gui.DisplayOrder = 999999
+    gui.ResetOnSpawn = false
+    gui.Parent = player.PlayerGui
+    
+    -- Background frame full screen
+    local background = Instance.new("Frame")
+    background.Name = "Background"
+    background.Parent = gui
+    background.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    background.BackgroundTransparency = 0.7
+    background.Size = UDim2.new(1, 0, 1, 0)
+    background.Position = UDim2.new(0, 0, 0, 0)
+    background.BorderSizePixel = 0
+    
+    -- Container for centered content
+    local container = Instance.new("Frame")
+    container.Name = "Container"
+    container.Parent = background
+    container.Size = UDim2.new(0, 400, 0, 150) -- Fixed size container
+    container.Position = UDim2.new(0.5, 0, 0.5, 0) -- Center of screen
+    container.AnchorPoint = Vector2.new(0.5, 0.5) -- Center anchor point
+    container.BackgroundTransparency = 1
+    
+    -- Main text
+    local mainText = Instance.new("TextLabel")
+    mainText.Name = "MainText"
+    mainText.Parent = container
+    mainText.Size = UDim2.new(1, 0, 0.5, 0) -- Take full container width
+    mainText.Position = UDim2.new(0, 0, 0, 0)
+    mainText.BackgroundTransparency = 1
+    mainText.Text = "Auto Farm Chest"
+    mainText.TextColor3 = Color3.fromRGB(255, 255, 255)
+    mainText.TextSize = 48
+    mainText.Font = Enum.Font.GothamBold
+    mainText.AnchorPoint = Vector2.new(0, 0)
+    
+    -- Credit text
+    local creditText = Instance.new("TextLabel")
+    creditText.Name = "CreditText"
+    creditText.Parent = container
+    container.Size = UDim2.new(1, 0, 0.3, 0) -- Take full container width
+    creditText.Position = UDim2.new(0, 0, 0.6, 0) -- Position below main text
+    creditText.BackgroundTransparency = 1
+    creditText.Text = "made by VuongDacThong"
+    creditText.TextColor3 = Color3.fromRGB(200, 200, 200)
+    creditText.TextSize = 24
+    creditText.Font = Enum.Font.Gotham
+    creditText.AnchorPoint = Vector2.new(0, 0)
+    
+    -- Add gradient effect to background
+    local gradient = Instance.new("UIGradient")
+    gradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 0, 0)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(20, 20, 20)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 0))
+    })
+    gradient.Parent = background
+    
+    -- Add corner radius to background
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 10)
+    corner.Parent = background
+    
+    -- Animation for gradient
+    local tweenInfo = TweenInfo.new(
+        5, -- Time
+        Enum.EasingStyle.Linear, -- Easing Style
+        Enum.EasingDirection.InOut, -- Easing Direction
+        -1, -- Repeat Count (-1 means infinite)
+        true -- Reverses
+    )
+    
+    local tween = TweenService:Create(gradient, tweenInfo, {
+        Rotation = 360
+    })
+    tween:Play()
+    
+    -- Thêm hiệu ứng fade in
+    background.BackgroundTransparency = 1
+    mainText.TextTransparency = 1
+    creditText.TextTransparency = 1
+    
+    local fadeInfo = TweenInfo.new(
+        1, -- Time
+        Enum.EasingStyle.Quad,
+        Enum.EasingDirection.Out
+    )
+    
+    TweenService:Create(background, fadeInfo, {BackgroundTransparency = 0.7}):Play()
+    TweenService:Create(mainText, fadeInfo, {TextTransparency = 0}):Play()
+    TweenService:Create(creditText, fadeInfo, {TextTransparency = 0}):Play()
+    
+    return gui, mainText
+end
+
+-- PHẦN NÀY LÀ TÍNH NĂNG CỦA SCRIPT ĐẦU TIÊN
+-- (Code farm chest từ script gốc của bạn)
+
+local LocalPlayer = game:GetService("Players").LocalPlayer
+local Locations = workspace._WorldOrigin.Locations
+
+local function getCharacter()
+    if not LocalPlayer.Character then
+        LocalPlayer.CharacterAdded:Wait()
+    end
+    LocalPlayer.Character:WaitForChild("HumanoidRootPart")
+    return LocalPlayer.Character
+end
+
+local function DistanceFromPlrSort(ObjectList)
+    local RootPart = getCharacter().LowerTorso
+    table.sort(ObjectList, function(ChestA, ChestB)
+        local RootPos = RootPart.Position
+        local DistanceA = (RootPos - ChestA.Position).Magnitude
+        local DistanceB = (RootPos - ChestB.Position).Magnitude
+        return DistanceA < DistanceB
+    end)
+end
+
+local UncheckedChests, FirstRun = {}, true
+local function getChestsSorted()
+    if FirstRun then
+        FirstRun = false
+        for _, Object in pairs(game:GetDescendants()) do
+            if Object.Name:find("Chest") and Object.ClassName == "Part" then
+                table.insert(UncheckedChests, Object)
+            end
+        end
+    end
+    local Chests = {}
+    for _, Chest in pairs(UncheckedChests) do
+        if Chest:FindFirstChild("TouchInterest") then
+            table.insert(Chests, Chest)
+        end
+    end
+    DistanceFromPlrSort(Chests)
+    return Chests
+end
+
+local function toggleNoclip(Toggle)
+    for _, v in pairs(getCharacter():GetChildren()) do
+        if v:IsA("BasePart") then
+            v.CanCollide = not Toggle
+        end
+    end
+end
+
+local function Teleport(Goal)
+    local RootPart = getCharacter().HumanoidRootPart
+    toggleNoclip(true)
+    RootPart.CFrame = Goal + Vector3.new(0, 3, 0)
+    toggleNoclip(false)
+end
+
+local function startFarm()
+    task.spawn(function()
+        while task.wait() do
+            local Chests = getChestsSorted()
+            if #Chests > 0 then
+                Teleport(Chests[1].CFrame)
+            end
+        end
+    end)
+end
+
+task.spawn(function()
+    local rs = game:GetService("ReplicatedStorage")
+    while task.wait(5) do
+        pcall(function()
+            rs.Remotes.CommF_:InvokeServer("SetTeam","Marines")
+        end)
+    end
+end)
+
+LocalPlayer.CharacterAdded:Connect(function()
+    task.wait(1) 
+    startFarm()
+end)
+
+-- TẠO GUI VÀ CHẠY FARM
+print("Creating GUI...")
+local gui, label = createGui()
+print("GUI Created! Starting farm...")
+startFarm()
