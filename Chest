@@ -18,7 +18,6 @@ local RetryDelay = 0.5
 
 -- Status tracking
 local CurrentStatus = "Initializing..."
-local ChestsCollected = 0
 local StatusLabel -- Will be set in createGui
 
 local function getCharacter()
@@ -65,7 +64,7 @@ local function createGui()
 	local container = Instance.new("Frame")
 	container.Name = "Container"
 	container.Parent = background
-	container.Size = UDim2.new(0, 550, 0, 260) -- Tăng chiều cao để chứa status
+	container.Size = UDim2.new(0, 550, 0, 230)
 	container.Position = UDim2.new(0.5, 0, 0.5, 0)
 	container.AnchorPoint = Vector2.new(0.5, 0.5)
 	container.BackgroundTransparency = 1
@@ -108,7 +107,7 @@ local function createGui()
 	topLine.Name = "TopLine"
 	topLine.Parent = contentFrame
 	topLine.Size = UDim2.new(0, 0, 0, 2)
-	topLine.Position = UDim2.new(0.5, 0, 0.12, 0)
+	topLine.Position = UDim2.new(0.5, 0, 0.13, 0)
 	topLine.AnchorPoint = Vector2.new(0.5, 0.5)
 	topLine.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
 	topLine.BorderSizePixel = 0
@@ -126,8 +125,8 @@ local function createGui()
 	local mainText = Instance.new("TextLabel")
 	mainText.Name = "MainText"
 	mainText.Parent = contentFrame
-	mainText.Size = UDim2.new(0.9, 0, 0.25, 0)
-	mainText.Position = UDim2.new(0.5, 0, 0.28, 0)
+	mainText.Size = UDim2.new(0.9, 0, 0.28, 0)
+	mainText.Position = UDim2.new(0.5, 0, 0.32, 0)
 	mainText.AnchorPoint = Vector2.new(0.5, 0.5)
 	mainText.BackgroundTransparency = 1
 	mainText.Text = "Auto Farm Chest"
@@ -144,7 +143,7 @@ local function createGui()
 	shadowText.Name = "ShadowText"
 	shadowText.Parent = contentFrame
 	shadowText.Size = mainText.Size
-	shadowText.Position = UDim2.new(0.5, 2, 0.28, 2)
+	shadowText.Position = UDim2.new(0.5, 2, 0.32, 2)
 	shadowText.AnchorPoint = Vector2.new(0.5, 0.5)
 	shadowText.BackgroundTransparency = 1
 	shadowText.Text = mainText.Text
@@ -156,12 +155,12 @@ local function createGui()
 	shadowText.TextYAlignment = Enum.TextYAlignment.Center
 	shadowText.ZIndex = 2
 
-	-- 🆕 STATUS LABEL
+	-- STATUS LABEL
 	local statusLabel = Instance.new("TextLabel")
 	statusLabel.Name = "StatusLabel"
 	statusLabel.Parent = contentFrame
-	statusLabel.Size = UDim2.new(0.9, 0, 0.15, 0)
-	statusLabel.Position = UDim2.new(0.5, 0, 0.52, 0)
+	statusLabel.Size = UDim2.new(0.9, 0, 0.18, 0)
+	statusLabel.Position = UDim2.new(0.5, 0, 0.58, 0)
 	statusLabel.AnchorPoint = Vector2.new(0.5, 0.5)
 	statusLabel.BackgroundTransparency = 1
 	statusLabel.Text = "Status: " .. CurrentStatus
@@ -172,39 +171,14 @@ local function createGui()
 	statusLabel.TextXAlignment = Enum.TextXAlignment.Center
 	statusLabel.TextYAlignment = Enum.TextYAlignment.Center
 	statusLabel.ZIndex = 3
-	StatusLabel = statusLabel -- Set global reference
-
-	-- 🆕 CHESTS COLLECTED COUNTER
-	local chestCounter = Instance.new("TextLabel")
-	chestCounter.Name = "ChestCounter"
-	chestCounter.Parent = contentFrame
-	chestCounter.Size = UDim2.new(0.9, 0, 0.12, 0)
-	chestCounter.Position = UDim2.new(0.5, 0, 0.68, 0)
-	chestCounter.AnchorPoint = Vector2.new(0.5, 0.5)
-	chestCounter.BackgroundTransparency = 1
-	chestCounter.Text = "Chests: 0"
-	chestCounter.TextColor3 = Color3.fromRGB(160, 160, 160)
-	chestCounter.TextSize = 16
-	chestCounter.Font = Enum.Font.Gotham
-	chestCounter.TextTransparency = 1
-	chestCounter.TextXAlignment = Enum.TextXAlignment.Center
-	chestCounter.TextYAlignment = Enum.TextYAlignment.Center
-	chestCounter.ZIndex = 3
-
-	-- Update chest counter continuously
-	task.spawn(function()
-		while chestCounter and chestCounter.Parent do
-			chestCounter.Text = "Chests Collected: " .. ChestsCollected
-			task.wait(0.5)
-		end
-	end)
+	StatusLabel = statusLabel
 
 	-- Credit text
 	local creditText = Instance.new("TextLabel")
 	creditText.Name = "CreditText"
 	creditText.Parent = contentFrame
-	creditText.Size = UDim2.new(0.9, 0, 0.12, 0)
-	creditText.Position = UDim2.new(0.5, 0, 0.83, 0)
+	creditText.Size = UDim2.new(0.9, 0, 0.15, 0)
+	creditText.Position = UDim2.new(0.5, 0, 0.78, 0)
 	creditText.AnchorPoint = Vector2.new(0.5, 0.5)
 	creditText.BackgroundTransparency = 1
 	creditText.Text = "made by VuongDacThong"
@@ -220,8 +194,8 @@ local function createGui()
 	local dotsContainer = Instance.new("Frame")
 	dotsContainer.Name = "DotsContainer"
 	dotsContainer.Parent = contentFrame
-	dotsContainer.Size = UDim2.new(0.2, 0, 0.04, 0)
-	dotsContainer.Position = UDim2.new(0.5, 0, 0.94, 0)
+	dotsContainer.Size = UDim2.new(0.2, 0, 0.05, 0)
+	dotsContainer.Position = UDim2.new(0.5, 0, 0.92, 0)
 	dotsContainer.AnchorPoint = Vector2.new(0.5, 0.5)
 	dotsContainer.BackgroundTransparency = 1
 	dotsContainer.ZIndex = 3
@@ -255,7 +229,6 @@ local function createGui()
 		TweenService:Create(shadowText, fadeInfo, { TextTransparency = 0.8 }):Play()
 		task.wait(0.2)
 		TweenService:Create(statusLabel, fadeInfo, { TextTransparency = 0.3 }):Play()
-		TweenService:Create(chestCounter, fadeInfo, { TextTransparency = 0.4 }):Play()
 		TweenService:Create(creditText, fadeInfo, { TextTransparency = 0.4 }):Play()
 	end)
 
@@ -393,7 +366,6 @@ local function Teleport(Goal)
 		toggleNoclip(true)
 		RootPart.CFrame = Goal + Vector3.new(0, 3, 0)
 		toggleNoclip(false)
-		ChestsCollected = ChestsCollected + 1
 	end)
 end
 
