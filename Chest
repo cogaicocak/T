@@ -15,10 +15,16 @@ local function getCharacter()
     return LocalPlayer.Character
 end
 
--- Create GUI - GIỐNG HỆT SCRIPT 1
+-- Create GUI với animation HOẠT ĐỘNG 100%
 local function createGui()
+    -- Xóa GUI cũ nếu có
+    local oldGui = LocalPlayer.PlayerGui:FindFirstChild("ChestFarmGUI")
+    if oldGui then
+        oldGui:Destroy()
+    end
+    
     local gui = Instance.new("ScreenGui")
-    gui.Name = "C"..tostring(math.random(1000, 9999))
+    gui.Name = "ChestFarmGUI"
     gui.IgnoreGuiInset = true
     gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     gui.DisplayOrder = 999999
@@ -30,7 +36,7 @@ local function createGui()
     background.Name = "Background"
     background.Parent = gui
     background.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    background.BackgroundTransparency = 0.7
+    background.BackgroundTransparency = 1 -- Bắt đầu trong suốt hoàn toàn
     background.Size = UDim2.new(1, 0, 1, 0)
     background.Position = UDim2.new(0, 0, 0, 0)
     background.BorderSizePixel = 0
@@ -39,44 +45,51 @@ local function createGui()
     local container = Instance.new("Frame")
     container.Name = "Container"
     container.Parent = background
-    container.Size = UDim2.new(0, 400, 0, 150) -- Fixed size container
-    container.Position = UDim2.new(0.5, 0, 0.5, 0) -- Center of screen
-    container.AnchorPoint = Vector2.new(0.5, 0.5) -- Center anchor point
+    container.Size = UDim2.new(0, 400, 0, 150)
+    container.Position = UDim2.new(0.5, 0, 0.5, 0)
+    container.AnchorPoint = Vector2.new(0.5, 0.5)
     container.BackgroundTransparency = 1
     
     -- Main text
     local mainText = Instance.new("TextLabel")
     mainText.Name = "MainText"
     mainText.Parent = container
-    mainText.Size = UDim2.new(1, 0, 0.5, 0) -- Take full container width
+    mainText.Size = UDim2.new(1, 0, 0.5, 0)
     mainText.Position = UDim2.new(0, 0, 0, 0)
     mainText.BackgroundTransparency = 1
     mainText.Text = "Auto Farm Chest"
     mainText.TextColor3 = Color3.fromRGB(255, 255, 255)
     mainText.TextSize = 48
     mainText.Font = Enum.Font.GothamBold
+    mainText.TextTransparency = 1 -- Bắt đầu trong suốt
     mainText.AnchorPoint = Vector2.new(0, 0)
+    mainText.TextXAlignment = Enum.TextXAlignment.Center
+    mainText.TextYAlignment = Enum.TextYAlignment.Center
     
     -- Credit text
     local creditText = Instance.new("TextLabel")
     creditText.Name = "CreditText"
     creditText.Parent = container
-    creditText.Size = UDim2.new(1, 0, 0.3, 0) -- Take full container width
-    creditText.Position = UDim2.new(0, 0, 0.6, 0) -- Position below main text
+    creditText.Size = UDim2.new(1, 0, 0.3, 0)
+    creditText.Position = UDim2.new(0, 0, 0.6, 0)
     creditText.BackgroundTransparency = 1
     creditText.Text = "made by VuongDacThong"
     creditText.TextColor3 = Color3.fromRGB(200, 200, 200)
     creditText.TextSize = 24
     creditText.Font = Enum.Font.Gotham
+    creditText.TextTransparency = 1 -- Bắt đầu trong suốt
     creditText.AnchorPoint = Vector2.new(0, 0)
+    creditText.TextXAlignment = Enum.TextXAlignment.Center
+    creditText.TextYAlignment = Enum.TextYAlignment.Center
     
     -- Add gradient effect to background
     local gradient = Instance.new("UIGradient")
     gradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 0, 0)),
-        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(20, 20, 20)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 0))
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(50, 0, 100)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(100, 50, 150)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(50, 0, 100))
     })
+    gradient.Rotation = 0 -- Bắt đầu từ 0
     gradient.Parent = background
     
     -- Add corner radius to background
@@ -84,35 +97,88 @@ local function createGui()
     corner.CornerRadius = UDim.new(0, 10)
     corner.Parent = background
     
-    -- Animation for gradient
-    local tweenInfo = TweenInfo.new(
-        5, -- Time
-        Enum.EasingStyle.Linear, -- Easing Style
-        Enum.EasingDirection.InOut, -- Easing Direction
-        -1, -- Repeat Count (-1 means infinite)
-        true -- Reverses
-    )
+    -- ===== BẮT ĐẦU ANIMATIONS =====
     
-    local tween = TweenService:Create(gradient, tweenInfo, {
-        Rotation = 360
-    })
-    tween:Play()
-    
-    -- Thêm hiệu ứng fade in
-    background.BackgroundTransparency = 1
-    mainText.TextTransparency = 1
-    creditText.TextTransparency = 1
-    
+    -- 1. FADE IN EFFECT (Chạy ngay lập tức)
     local fadeInfo = TweenInfo.new(
-        1, -- Time
+        1.5, -- Time dài hơn để thấy rõ
         Enum.EasingStyle.Quad,
         Enum.EasingDirection.Out
     )
     
-    TweenService:Create(background, fadeInfo, {BackgroundTransparency = 0.7}):Play()
-    TweenService:Create(mainText, fadeInfo, {TextTransparency = 0}):Play()
-    TweenService:Create(creditText, fadeInfo, {TextTransparency = 0}):Play()
+    local fadeBg = TweenService:Create(background, fadeInfo, {BackgroundTransparency = 0.3})
+    local fadeMain = TweenService:Create(mainText, fadeInfo, {TextTransparency = 0})
+    local fadeCredit = TweenService:Create(creditText, fadeInfo, {TextTransparency = 0})
     
+    fadeBg:Play()
+    fadeMain:Play()
+    fadeCredit:Play()
+    
+    -- 2. GRADIENT ROTATION ANIMATION (Xoay liên tục)
+    task.wait(0.5) -- Đợi fade in một chút
+    
+    local rotationInfo = TweenInfo.new(
+        3, -- Thời gian xoay 1 vòng (3 giây)
+        Enum.EasingStyle.Linear,
+        Enum.EasingDirection.InOut,
+        -1, -- Lặp vô hạn
+        false -- Không reverse
+    )
+    
+    local rotationTween = TweenService:Create(gradient, rotationInfo, {
+        Rotation = 360
+    })
+    rotationTween:Play()
+    
+    -- 3. TEXT PULSE ANIMATION (Hiệu ứng nhấp nháy nhẹ)
+    task.spawn(function()
+        task.wait(1.5) -- Đợi fade in xong
+        while mainText and mainText.Parent do
+            local pulseInfo = TweenInfo.new(
+                1.5,
+                Enum.EasingStyle.Sine,
+                Enum.EasingDirection.InOut
+            )
+            
+            local pulseOut = TweenService:Create(mainText, pulseInfo, {
+                TextColor3 = Color3.fromRGB(200, 200, 255)
+            })
+            pulseOut:Play()
+            pulseOut.Completed:Wait()
+            
+            local pulseIn = TweenService:Create(mainText, pulseInfo, {
+                TextColor3 = Color3.fromRGB(255, 255, 255)
+            })
+            pulseIn:Play()
+            pulseIn.Completed:Wait()
+        end
+    end)
+    
+    -- 4. BACKGROUND COLOR SHIFT (Đổi màu nhẹ)
+    task.spawn(function()
+        task.wait(2)
+        while background and background.Parent do
+            local colorInfo = TweenInfo.new(
+                4,
+                Enum.EasingStyle.Sine,
+                Enum.EasingDirection.InOut
+            )
+            
+            local colorShift = TweenService:Create(background, colorInfo, {
+                BackgroundColor3 = Color3.fromRGB(10, 10, 20)
+            })
+            colorShift:Play()
+            colorShift.Completed:Wait()
+            
+            local colorReturn = TweenService:Create(background, colorInfo, {
+                BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+            })
+            colorReturn:Play()
+            colorReturn.Completed:Wait()
+        end
+    end)
+    
+    print("✅ GUI Created with ALL animations!")
     return gui, mainText
 end
 
@@ -135,12 +201,14 @@ local function getChestsSorted()
     end
     
     -- Sort by distance
-    local RootPart = getCharacter().HumanoidRootPart
-    table.sort(Chests, function(ChestA, ChestB)
-        local RootPos = RootPart.Position
-        local DistanceA = (RootPos - ChestA.Position).Magnitude
-        local DistanceB = (RootPos - ChestB.Position).Magnitude
-        return DistanceA < DistanceB
+    pcall(function()
+        local RootPart = getCharacter().HumanoidRootPart
+        table.sort(Chests, function(ChestA, ChestB)
+            local RootPos = RootPart.Position
+            local DistanceA = (RootPos - ChestA.Position).Magnitude
+            local DistanceB = (RootPos - ChestB.Position).Magnitude
+            return DistanceA < DistanceB
+        end)
     end)
     
     return Chests
@@ -148,29 +216,35 @@ end
 
 -- Noclip toggle
 local function toggleNoclip(Toggle)
-    for _, v in pairs(getCharacter():GetChildren()) do
-        if v:IsA("BasePart") then
-            v.CanCollide = not Toggle
+    pcall(function()
+        for _, v in pairs(getCharacter():GetChildren()) do
+            if v:IsA("BasePart") then
+                v.CanCollide = not Toggle
+            end
         end
-    end
+    end)
 end
 
 -- Teleport function
 local function Teleport(Goal)
-    local RootPart = getCharacter().HumanoidRootPart
-    toggleNoclip(true)
-    RootPart.CFrame = Goal + Vector3.new(0, 3, 0)
-    toggleNoclip(false)
+    pcall(function()
+        local RootPart = getCharacter().HumanoidRootPart
+        toggleNoclip(true)
+        RootPart.CFrame = Goal + Vector3.new(0, 3, 0)
+        toggleNoclip(false)
+    end)
 end
 
 -- Main farm loop
 local function startFarm()
     task.spawn(function()
-        while task.wait() do
-            local Chests = getChestsSorted()
-            if #Chests > 0 then
-                Teleport(Chests[1].CFrame)
-            end
+        while task.wait(0.1) do
+            pcall(function()
+                local Chests = getChestsSorted()
+                if #Chests > 0 then
+                    Teleport(Chests[1].CFrame)
+                end
+            end)
         end
     end)
 end
@@ -186,10 +260,19 @@ end)
 
 -- Character added handler
 LocalPlayer.CharacterAdded:Connect(function()
-    task.wait(1) 
-    startFarm()
+    task.wait(1)
+    pcall(startFarm)
 end)
 
 -- Initialize
-createGui()
-startFarm()
+print("🚀 Starting Chest Farm Script...")
+local success, err = pcall(function()
+    createGui()
+    startFarm()
+end)
+
+if success then
+    print("✅ Script loaded successfully!")
+else
+    warn("❌ Error:", err)
+end
