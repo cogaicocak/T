@@ -14,6 +14,7 @@ local NEXT_PLACE_ID = 100117331123089
 local NoChestTime = 0
 local NoChestThreshold = 3
 local HasTeleported = false
+local RetryDelay = 0.5 -- Spam mỗi 0.5 giây
 
 local function getCharacter()
 	if not LocalPlayer.Character then
@@ -269,7 +270,7 @@ local function createGui()
 	return gui, mainText
 end
 
--- Chest detection (GIỐNG SCRIPT 2)
+-- Chest detection
 local UncheckedChests, FirstRun = {}, true
 local function getChestsSorted()
 	if FirstRun then
@@ -288,7 +289,6 @@ local function getChestsSorted()
 		end
 	end
 
-	-- Sort by distance
 	pcall(function()
 		local RootPart = getCharacter().HumanoidRootPart
 		table.sort(Chests, function(ChestA, ChestB)
@@ -313,7 +313,7 @@ local function toggleNoclip(Toggle)
 	end)
 end
 
--- Teleport (GIỐNG SCRIPT 2 - MƯỢT)
+-- Teleport
 local function Teleport(Goal)
 	pcall(function()
 		local RootPart = getCharacter().HumanoidRootPart
@@ -323,21 +323,68 @@ local function Teleport(Goal)
 	end)
 end
 
--- Teleport to next place
+-- 🆕 AUTO RETRY TELEPORT (Spam mỗi 0.5s khi server full hoặc bị kick)
 local function TeleportToNextPlace()
 	if HasTeleported then return end
 	HasTeleported = true
 	
-	print("⚠️ No chests for " .. NoChestThreshold .. "s. Teleporting...")
-	pcall(function()
-		TeleportService:Teleport(NEXT_PLACE_ID, LocalPlayer)
+	print("⚠️ No chests for " .. NoChestThreshold .. "s. Starting auto-retry teleport...")
+	
+	-- Spam teleport mỗi 0.5 giây cho đến khi thành công
+	task.spawn(function()
+		local attemptCount = 0
+		while true do
+			attemptCount = attemptCount + 1
+			
+			local success, errorMsg = pcall(function()
+				print("🔄 Teleport attempt #" .. attemptCount .. " to PlaceId: " .. NEXT_PLACE_ID)
+				TeleportService:Teleport(NEXT_PLACE_ID, LocalPlayer)
+			end)
+			
+			if not success then
+				warn("❌ Teleport failed: " .. tostring(errorMsg))
+				warn("⏳ Retrying in " .. RetryDelay .. " seconds...")
+			else
+				print("✅ Teleport request sent successfully!")
+			end
+			
+			task.wait(RetryDelay) -- Đợi 0.5 giây rồi thử lại
+		end
 	end)
 end
 
--- Main farm loop (GIỐNG SCRIPT 2 - KHÔNG CÓ DELAY!)
+-- 🆕 AUTO RECONNECT khi bị kick
+local function setupAutoReconnect()
+	-- Detect khi bị kick
+	game:GetService("CoreGui").RobloxPromptGui.promptOverlay.ChildAdded:Connect(function(prompt)
+		if prompt.Name == "ErrorPrompt" or prompt.Name == "ConnectionErrorPrompt" then
+			print("⚠️ Detected kick/disconnect! Auto reconnecting...")
+			task.wait(RetryDelay)
+			
+			-- Spam rejoin
+			task.spawn(function()
+				while true do
+					pcall(function()
+						TeleportService:Teleport(game.PlaceId, LocalPlayer)
+					end)
+					task.wait(RetryDelay)
+				end
+			end)
+		end
+	end)
+	
+	-- Backup: Listen to TeleportService failed events
+	TeleportService.TeleportInitFailed:Connect(function(player, result, errorMessage)
+		warn("❌ Teleport failed! Result: " .. tostring(result))
+		warn("❌ Error: " .. tostring(errorMessage))
+		warn("⏳ Auto-retrying in " .. RetryDelay .. "s...")
+	end)
+end
+
+-- Main farm loop
 local function startFarm()
 	task.spawn(function()
-		while task.wait() do  -- ✅ task.wait() không có tham số = mượt như Script 2
+		while task.wait() do
 			pcall(function()
 				local Chests = getChestsSorted()
 
@@ -345,7 +392,7 @@ local function startFarm()
 					NoChestTime = 0
 					Teleport(Chests[1].CFrame)
 				else
-					NoChestTime = NoChestTime + 0.03  -- task.wait() ~= 0.03s
+					NoChestTime = NoChestTime + 0.03
 					if NoChestTime >= NoChestThreshold then
 						TeleportToNextPlace()
 					end
@@ -374,8 +421,9 @@ LocalPlayer.CharacterAdded:Connect(function()
 end)
 
 -- Initialize
-print("🚀 Starting Smooth Chest Farm...")
+print("🚀 Starting Auto Chest Farm with Auto-Retry Teleport...")
 pcall(function()
 	createGui()
+	setupAutoReconnect() -- 🆕 Bật auto reconnect
 	startFarm()
 end)
