@@ -15,7 +15,7 @@ local function getCharacter()
     return LocalPlayer.Character
 end
 
--- Create GUI with all effects
+-- Create GUI - GIỐNG HỆT SCRIPT 1
 local function createGui()
     local gui = Instance.new("ScreenGui")
     gui.Name = "C"..tostring(math.random(1000, 9999))
@@ -30,7 +30,7 @@ local function createGui()
     background.Name = "Background"
     background.Parent = gui
     background.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    background.BackgroundTransparency = 1
+    background.BackgroundTransparency = 0.7
     background.Size = UDim2.new(1, 0, 1, 0)
     background.Position = UDim2.new(0, 0, 0, 0)
     background.BorderSizePixel = 0
@@ -39,37 +39,35 @@ local function createGui()
     local container = Instance.new("Frame")
     container.Name = "Container"
     container.Parent = background
-    container.Size = UDim2.new(0, 400, 0, 150)
-    container.Position = UDim2.new(0.5, 0, 0.5, 0)
-    container.AnchorPoint = Vector2.new(0.5, 0.5)
+    container.Size = UDim2.new(0, 400, 0, 150) -- Fixed size container
+    container.Position = UDim2.new(0.5, 0, 0.5, 0) -- Center of screen
+    container.AnchorPoint = Vector2.new(0.5, 0.5) -- Center anchor point
     container.BackgroundTransparency = 1
     
     -- Main text
     local mainText = Instance.new("TextLabel")
     mainText.Name = "MainText"
     mainText.Parent = container
-    mainText.Size = UDim2.new(1, 0, 0.5, 0)
+    mainText.Size = UDim2.new(1, 0, 0.5, 0) -- Take full container width
     mainText.Position = UDim2.new(0, 0, 0, 0)
     mainText.BackgroundTransparency = 1
     mainText.Text = "Auto Farm Chest"
     mainText.TextColor3 = Color3.fromRGB(255, 255, 255)
     mainText.TextSize = 48
     mainText.Font = Enum.Font.GothamBold
-    mainText.TextTransparency = 1
     mainText.AnchorPoint = Vector2.new(0, 0)
     
     -- Credit text
     local creditText = Instance.new("TextLabel")
     creditText.Name = "CreditText"
     creditText.Parent = container
-    creditText.Size = UDim2.new(1, 0, 0.3, 0)
-    creditText.Position = UDim2.new(0, 0, 0.6, 0)
+    creditText.Size = UDim2.new(1, 0, 0.3, 0) -- Take full container width
+    creditText.Position = UDim2.new(0, 0, 0.6, 0) -- Position below main text
     creditText.BackgroundTransparency = 1
     creditText.Text = "made by VuongDacThong"
     creditText.TextColor3 = Color3.fromRGB(200, 200, 200)
     creditText.TextSize = 24
     creditText.Font = Enum.Font.Gotham
-    creditText.TextTransparency = 1
     creditText.AnchorPoint = Vector2.new(0, 0)
     
     -- Add gradient effect to background
@@ -86,13 +84,13 @@ local function createGui()
     corner.CornerRadius = UDim.new(0, 10)
     corner.Parent = background
     
-    -- Animation for gradient rotation
+    -- Animation for gradient
     local tweenInfo = TweenInfo.new(
-        5,
-        Enum.EasingStyle.Linear,
-        Enum.EasingDirection.InOut,
-        -1,
-        true
+        5, -- Time
+        Enum.EasingStyle.Linear, -- Easing Style
+        Enum.EasingDirection.InOut, -- Easing Direction
+        -1, -- Repeat Count (-1 means infinite)
+        true -- Reverses
     )
     
     local tween = TweenService:Create(gradient, tweenInfo, {
@@ -100,9 +98,13 @@ local function createGui()
     })
     tween:Play()
     
-    -- Fade in effect
+    -- Thêm hiệu ứng fade in
+    background.BackgroundTransparency = 1
+    mainText.TextTransparency = 1
+    creditText.TextTransparency = 1
+    
     local fadeInfo = TweenInfo.new(
-        1,
+        1, -- Time
         Enum.EasingStyle.Quad,
         Enum.EasingDirection.Out
     )
