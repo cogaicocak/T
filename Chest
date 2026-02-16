@@ -1,17 +1,18 @@
+
 -- Services
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TeleportService = game:GetService("TeleportService") -- NEW
+local TeleportService = game:GetService("TeleportService")
 
 -- Variables
 local LocalPlayer = Players.LocalPlayer
 
--- NEW (Teleport config)
+-- Teleport Configuration
 local NEXT_PLACE_ID = 100117331123089
 local NoChestTime = 0
-local NoChestThreshold = 3 -- seconds (đảm bảo thật sự hết chest)
+local NoChestThreshold = 3
 local HasTeleported = false
 
 local function getCharacter()
@@ -22,9 +23,8 @@ local function getCharacter()
 	return LocalPlayer.Character
 end
 
--- Create GUI với hiệu ứng MONOCHROME CỰC ĐẸP
+-- Create GUI với hiệu ứng MONOCHROME
 local function createGui()
-	-- Xóa GUI cũ nếu có
 	local oldGui = LocalPlayer.PlayerGui:FindFirstChild("ChestFarmGUI")
 	if oldGui then
 		oldGui:Destroy()
@@ -38,7 +38,6 @@ local function createGui()
 	gui.ResetOnSpawn = false
 	gui.Parent = LocalPlayer.PlayerGui
 
-	-- Background frame full screen
 	local background = Instance.new("Frame")
 	background.Name = "Background"
 	background.Parent = gui
@@ -48,7 +47,6 @@ local function createGui()
 	background.Position = UDim2.new(0, 0, 0, 0)
 	background.BorderSizePixel = 0
 
-	-- Container for centered content
 	local container = Instance.new("Frame")
 	container.Name = "Container"
 	container.Parent = background
@@ -57,7 +55,6 @@ local function createGui()
 	container.AnchorPoint = Vector2.new(0.5, 0.5)
 	container.BackgroundTransparency = 1
 
-	-- Glow effect layer (Background glow)
 	local glowFrame = Instance.new("Frame")
 	glowFrame.Name = "GlowFrame"
 	glowFrame.Parent = container
@@ -72,7 +69,6 @@ local function createGui()
 	glowCorner.CornerRadius = UDim.new(0, 20)
 	glowCorner.Parent = glowFrame
 
-	-- Content frame (Main container)
 	local contentFrame = Instance.new("Frame")
 	contentFrame.Name = "ContentFrame"
 	contentFrame.Parent = container
@@ -87,14 +83,12 @@ local function createGui()
 	contentCorner.CornerRadius = UDim.new(0, 15)
 	contentCorner.Parent = contentFrame
 
-	-- Subtle border line
 	local borderStroke = Instance.new("UIStroke")
 	borderStroke.Color = Color3.fromRGB(70, 70, 70)
 	borderStroke.Thickness = 1
 	borderStroke.Transparency = 1
 	borderStroke.Parent = contentFrame
 
-	-- Animated line decoration (Top)
 	local topLine = Instance.new("Frame")
 	topLine.Name = "TopLine"
 	topLine.Parent = contentFrame
@@ -113,7 +107,6 @@ local function createGui()
 	})
 	topGradient.Parent = topLine
 
-	-- Main text
 	local mainText = Instance.new("TextLabel")
 	mainText.Name = "MainText"
 	mainText.Parent = contentFrame
@@ -130,7 +123,6 @@ local function createGui()
 	mainText.TextYAlignment = Enum.TextYAlignment.Center
 	mainText.ZIndex = 3
 
-	-- Text shadow effect
 	local shadowText = Instance.new("TextLabel")
 	shadowText.Name = "ShadowText"
 	shadowText.Parent = contentFrame
@@ -147,7 +139,6 @@ local function createGui()
 	shadowText.TextYAlignment = Enum.TextYAlignment.Center
 	shadowText.ZIndex = 2
 
-	-- Credit text
 	local creditText = Instance.new("TextLabel")
 	creditText.Name = "CreditText"
 	creditText.Parent = contentFrame
@@ -164,7 +155,6 @@ local function createGui()
 	creditText.TextYAlignment = Enum.TextYAlignment.Center
 	creditText.ZIndex = 3
 
-	-- Decorative dots
 	local dotsContainer = Instance.new("Frame")
 	dotsContainer.Name = "DotsContainer"
 	dotsContainer.Parent = contentFrame
@@ -190,147 +180,96 @@ local function createGui()
 		dotCorner.Parent = dot
 	end
 
-	-- ===== ANIMATIONS - PURE MONOCHROME =====
-
-	-- 1. SMOOTH FADE IN
+	-- Animations
 	task.spawn(function()
 		local fadeInfo = TweenInfo.new(1.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-
 		TweenService:Create(background, fadeInfo, { BackgroundTransparency = 0.4 }):Play()
 		TweenService:Create(contentFrame, fadeInfo, { BackgroundTransparency = 0.05 }):Play()
 		TweenService:Create(borderStroke, fadeInfo, { Transparency = 0.6 }):Play()
-
 		task.wait(0.3)
 		TweenService:Create(mainText, fadeInfo, { TextTransparency = 0 }):Play()
 		TweenService:Create(shadowText, fadeInfo, { TextTransparency = 0.8 }):Play()
-
 		task.wait(0.2)
 		TweenService:Create(creditText, fadeInfo, { TextTransparency = 0.4 }):Play()
 	end)
 
-	-- 2. GLOW PULSE (Xám nhẹ)
 	task.spawn(function()
 		task.wait(1)
 		while glowFrame and glowFrame.Parent do
-			local pulseInfo = TweenInfo.new(3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
-
-			local glowIn = TweenService:Create(glowFrame, pulseInfo, { BackgroundTransparency = 0.9 })
-			glowIn:Play()
-			glowIn.Completed:Wait()
-
-			local glowOut = TweenService:Create(glowFrame, pulseInfo, { BackgroundTransparency = 1 })
-			glowOut:Play()
-			glowOut.Completed:Wait()
+			TweenService:Create(glowFrame, TweenInfo.new(3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { BackgroundTransparency = 0.9 }):Play()
+			task.wait(3)
+			TweenService:Create(glowFrame, TweenInfo.new(3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { BackgroundTransparency = 1 }):Play()
+			task.wait(3)
 		end
 	end)
 
-	-- 3. TOP LINE EXPAND ANIMATION
 	task.spawn(function()
 		task.wait(0.8)
-		local expandInfo = TweenInfo.new(1.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
-		TweenService:Create(topLine, expandInfo, { Size = UDim2.new(0.6, 0, 0, 2) }):Play()
-
-		-- Line gradient flow
+		TweenService:Create(topLine, TweenInfo.new(1.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), { Size = UDim2.new(0.6, 0, 0, 2) }):Play()
 		task.wait(1.5)
 		while topGradient and topGradient.Parent do
-			local flowInfo = TweenInfo.new(3, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut)
-			local flow = TweenService:Create(topGradient, flowInfo, { Offset = Vector2.new(1, 0) })
+			local flow = TweenService:Create(topGradient, TweenInfo.new(3, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut), { Offset = Vector2.new(1, 0) })
 			flow:Play()
 			flow.Completed:Wait()
 			topGradient.Offset = Vector2.new(-1, 0)
 		end
 	end)
 
-	-- 4. TEXT SUBTLE BREATHING
 	task.spawn(function()
 		task.wait(2)
 		while mainText and mainText.Parent do
-			local breathInfo = TweenInfo.new(4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
-
-			local breathOut = TweenService:Create(mainText, breathInfo, {
-				TextColor3 = Color3.fromRGB(200, 200, 200)
-			})
-			breathOut:Play()
-			breathOut.Completed:Wait()
-
-			local breathIn = TweenService:Create(mainText, breathInfo, {
-				TextColor3 = Color3.fromRGB(240, 240, 240)
-			})
-			breathIn:Play()
-			breathIn.Completed:Wait()
+			TweenService:Create(mainText, TweenInfo.new(4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { TextColor3 = Color3.fromRGB(200, 200, 200) }):Play()
+			task.wait(4)
+			TweenService:Create(mainText, TweenInfo.new(4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { TextColor3 = Color3.fromRGB(240, 240, 240) }):Play()
+			task.wait(4)
 		end
 	end)
 
-	-- 5. DOTS LOADING ANIMATION
 	task.spawn(function()
 		task.wait(1.5)
 		local dots = dotsContainer:GetChildren()
-
 		while dotsContainer and dotsContainer.Parent do
 			for _, dot in ipairs(dots) do
 				if dot:IsA("Frame") then
-					local fadeInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut)
-					TweenService:Create(dot, fadeInfo, { BackgroundTransparency = 0.3 }):Play()
+					TweenService:Create(dot, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), { BackgroundTransparency = 0.3 }):Play()
 					task.wait(0.15)
 				end
 			end
-
 			task.wait(0.3)
-
 			for _, dot in ipairs(dots) do
 				if dot:IsA("Frame") then
-					local fadeInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut)
-					TweenService:Create(dot, fadeInfo, { BackgroundTransparency = 1 }):Play()
+					TweenService:Create(dot, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), { BackgroundTransparency = 1 }):Play()
 				end
 			end
-
 			task.wait(1)
 		end
 	end)
 
-	-- 6. BORDER SUBTLE GLOW (Chỉ xám)
 	task.spawn(function()
 		task.wait(2.5)
 		while borderStroke and borderStroke.Parent do
-			local glowInfo = TweenInfo.new(5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
-
-			local glowUp = TweenService:Create(borderStroke, glowInfo, {
-				Color = Color3.fromRGB(100, 100, 100),
-				Transparency = 0.4
-			})
-			glowUp:Play()
-			glowUp.Completed:Wait()
-
-			local glowDown = TweenService:Create(borderStroke, glowInfo, {
-				Color = Color3.fromRGB(70, 70, 70),
-				Transparency = 0.6
-			})
-			glowDown:Play()
-			glowDown.Completed:Wait()
+			TweenService:Create(borderStroke, TweenInfo.new(5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { Color = Color3.fromRGB(100, 100, 100), Transparency = 0.4 }):Play()
+			task.wait(5)
+			TweenService:Create(borderStroke, TweenInfo.new(5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { Color = Color3.fromRGB(70, 70, 70), Transparency = 0.6 }):Play()
+			task.wait(5)
 		end
 	end)
 
-	-- 7. CREDIT TEXT FADE PULSE
 	task.spawn(function()
 		task.wait(3)
 		while creditText and creditText.Parent do
-			local fadeInfo = TweenInfo.new(6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
-
-			local fadeOut = TweenService:Create(creditText, fadeInfo, { TextTransparency = 0.7 })
-			fadeOut:Play()
-			fadeOut.Completed:Wait()
-
-			local fadeIn = TweenService:Create(creditText, fadeInfo, { TextTransparency = 0.4 })
-			fadeIn:Play()
-			fadeIn.Completed:Wait()
+			TweenService:Create(creditText, TweenInfo.new(6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { TextTransparency = 0.7 }):Play()
+			task.wait(6)
+			TweenService:Create(creditText, TweenInfo.new(6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { TextTransparency = 0.4 }):Play()
+			task.wait(6)
 		end
 	end)
 
-	print("✅ Pure Monochrome GUI loaded!")
+	print("✅ Monochrome GUI Loaded!")
 	return gui, mainText
 end
 
--- Chest detection and sorting
+-- Chest detection (GIỐNG SCRIPT 2)
 local UncheckedChests, FirstRun = {}, true
 local function getChestsSorted()
 	if FirstRun then
@@ -349,6 +288,7 @@ local function getChestsSorted()
 		end
 	end
 
+	-- Sort by distance
 	pcall(function()
 		local RootPart = getCharacter().HumanoidRootPart
 		table.sort(Chests, function(ChestA, ChestB)
@@ -373,7 +313,7 @@ local function toggleNoclip(Toggle)
 	end)
 end
 
--- Teleport function
+-- Teleport (GIỐNG SCRIPT 2 - MƯỢT)
 local function Teleport(Goal)
 	pcall(function()
 		local RootPart = getCharacter().HumanoidRootPart
@@ -383,22 +323,21 @@ local function Teleport(Goal)
 	end)
 end
 
--- NEW: Teleport to next place when all chests are cleared
+-- Teleport to next place
 local function TeleportToNextPlace()
-	if HasTeleported then
-		return
-	end
+	if HasTeleported then return end
 	HasTeleported = true
-
+	
+	print("⚠️ No chests for " .. NoChestThreshold .. "s. Teleporting...")
 	pcall(function()
 		TeleportService:Teleport(NEXT_PLACE_ID, LocalPlayer)
 	end)
 end
 
--- Main farm loop
+-- Main farm loop (GIỐNG SCRIPT 2 - KHÔNG CÓ DELAY!)
 local function startFarm()
 	task.spawn(function()
-		while task.wait(0.1) do
+		while task.wait() do  -- ✅ task.wait() không có tham số = mượt như Script 2
 			pcall(function()
 				local Chests = getChestsSorted()
 
@@ -406,7 +345,7 @@ local function startFarm()
 					NoChestTime = 0
 					Teleport(Chests[1].CFrame)
 				else
-					NoChestTime += 0.1
+					NoChestTime = NoChestTime + 0.03  -- task.wait() ~= 0.03s
 					if NoChestTime >= NoChestThreshold then
 						TeleportToNextPlace()
 					end
@@ -416,28 +355,26 @@ local function startFarm()
 	end)
 end
 
--- Auto set team to Marines
+-- Auto Marines
 task.spawn(function()
+	local rs = ReplicatedStorage
 	while task.wait(5) do
 		pcall(function()
-			ReplicatedStorage.Remotes.CommF_:InvokeServer("SetTeam", "Marines")
+			rs.Remotes.CommF_:InvokeServer("SetTeam", "Marines")
 		end)
 	end
 end)
 
--- Character added handler
+-- Character respawn
 LocalPlayer.CharacterAdded:Connect(function()
 	task.wait(1)
-
-	-- NEW: reset state on respawn
 	NoChestTime = 0
 	HasTeleported = false
-
 	pcall(startFarm)
 end)
 
 -- Initialize
-print("🚀 Starting Monochrome Chest Farm Script...")
+print("🚀 Starting Smooth Chest Farm...")
 pcall(function()
 	createGui()
 	startFarm()
