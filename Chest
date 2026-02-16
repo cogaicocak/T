@@ -1,11 +1,21 @@
 -- Services
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 -- Variables
-local player = Players.LocalPlayer
+local LocalPlayer = Players.LocalPlayer
 
--- Hàm tạo giao diện
+local function getCharacter()
+    if not LocalPlayer.Character then
+        LocalPlayer.CharacterAdded:Wait()
+    end
+    LocalPlayer.Character:WaitForChild("HumanoidRootPart")
+    return LocalPlayer.Character
+end
+
+-- Create GUI with all effects
 local function createGui()
     local gui = Instance.new("ScreenGui")
     gui.Name = "C"..tostring(math.random(1000, 9999))
@@ -13,14 +23,14 @@ local function createGui()
     gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     gui.DisplayOrder = 999999
     gui.ResetOnSpawn = false
-    gui.Parent = player.PlayerGui
+    gui.Parent = LocalPlayer.PlayerGui
     
     -- Background frame full screen
     local background = Instance.new("Frame")
     background.Name = "Background"
     background.Parent = gui
     background.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    background.BackgroundTransparency = 0.7
+    background.BackgroundTransparency = 1
     background.Size = UDim2.new(1, 0, 1, 0)
     background.Position = UDim2.new(0, 0, 0, 0)
     background.BorderSizePixel = 0
@@ -45,6 +55,7 @@ local function createGui()
     mainText.TextColor3 = Color3.fromRGB(255, 255, 255)
     mainText.TextSize = 48
     mainText.Font = Enum.Font.GothamBold
+    mainText.TextTransparency = 1
     mainText.AnchorPoint = Vector2.new(0, 0)
     
     -- Credit text
@@ -58,6 +69,7 @@ local function createGui()
     creditText.TextColor3 = Color3.fromRGB(200, 200, 200)
     creditText.TextSize = 24
     creditText.Font = Enum.Font.Gotham
+    creditText.TextTransparency = 1
     creditText.AnchorPoint = Vector2.new(0, 0)
     
     -- Add gradient effect to background
@@ -74,13 +86,13 @@ local function createGui()
     corner.CornerRadius = UDim.new(0, 10)
     corner.Parent = background
     
-    -- Animation for gradient (XOAY TRÒN MÃI)
+    -- Animation for gradient rotation
     local tweenInfo = TweenInfo.new(
-        5, -- 5 giây xoay 1 vòng
+        5,
         Enum.EasingStyle.Linear,
         Enum.EasingDirection.InOut,
-        -1, -- Lặp vô hạn
-        true -- Xoay qua xoay lại
+        -1,
+        true
     )
     
     local tween = TweenService:Create(gradient, tweenInfo, {
@@ -88,13 +100,9 @@ local function createGui()
     })
     tween:Play()
     
-    -- Hiệu ứng FADE IN (mờ dần xuất hiện)
-    background.BackgroundTransparency = 1
-    mainText.TextTransparency = 1
-    creditText.TextTransparency = 1
-    
+    -- Fade in effect
     local fadeInfo = TweenInfo.new(
-        1, -- 1 giây fade in
+        1,
         Enum.EasingStyle.Quad,
         Enum.EasingDirection.Out
     )
@@ -106,28 +114,7 @@ local function createGui()
     return gui, mainText
 end
 
--- ===== PHẦN TÍNH NĂNG FARM CHEST (TỪ SCRIPT GỐC) =====
-
-local LocalPlayer = game:GetService("Players").LocalPlayer
-
-local function getCharacter()
-    if not LocalPlayer.Character then
-        LocalPlayer.CharacterAdded:Wait()
-    end
-    LocalPlayer.Character:WaitForChild("HumanoidRootPart")
-    return LocalPlayer.Character
-end
-
-local function DistanceFromPlrSort(ObjectList)
-    local RootPart = getCharacter().LowerTorso
-    table.sort(ObjectList, function(ChestA, ChestB)
-        local RootPos = RootPart.Position
-        local DistanceA = (RootPos - ChestA.Position).Magnitude
-        local DistanceB = (RootPos - ChestB.Position).Magnitude
-        return DistanceA < DistanceB
-    end)
-end
-
+-- Chest detection and sorting
 local UncheckedChests, FirstRun = {}, true
 local function getChestsSorted()
     if FirstRun then
@@ -144,10 +131,20 @@ local function getChestsSorted()
             table.insert(Chests, Chest)
         end
     end
-    DistanceFromPlrSort(Chests)
+    
+    -- Sort by distance
+    local RootPart = getCharacter().HumanoidRootPart
+    table.sort(Chests, function(ChestA, ChestB)
+        local RootPos = RootPart.Position
+        local DistanceA = (RootPos - ChestA.Position).Magnitude
+        local DistanceB = (RootPos - ChestB.Position).Magnitude
+        return DistanceA < DistanceB
+    end)
+    
     return Chests
 end
 
+-- Noclip toggle
 local function toggleNoclip(Toggle)
     for _, v in pairs(getCharacter():GetChildren()) do
         if v:IsA("BasePart") then
@@ -156,6 +153,7 @@ local function toggleNoclip(Toggle)
     end
 end
 
+-- Teleport function
 local function Teleport(Goal)
     local RootPart = getCharacter().HumanoidRootPart
     toggleNoclip(true)
@@ -163,6 +161,7 @@ local function Teleport(Goal)
     toggleNoclip(false)
 end
 
+-- Main farm loop
 local function startFarm()
     task.spawn(function()
         while task.wait() do
@@ -174,18 +173,21 @@ local function startFarm()
     end)
 end
 
--- Tự động chọn team Marines
+-- Auto set team to Marines
 task.spawn(function()
-    local rs = game:GetService("ReplicatedStorage")
     while task.wait(5) do
         pcall(function()
-            rs.Remotes.CommF_:InvokeServer("SetTeam","Marines")
+            ReplicatedStorage.Remotes.CommF_:InvokeServer("SetTeam","Marines")
         end)
     end
 end)
 
--- Khi respawn thì chạy lại farm
+-- Character added handler
 LocalPlayer.CharacterAdded:Connect(function()
     task.wait(1) 
     startFarm()
 end)
+
+-- Initialize
+createGui()
+startFarm()
