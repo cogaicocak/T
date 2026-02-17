@@ -124,7 +124,7 @@ local function createGui()
 	mainText.Position = UDim2.new(0.5, 0, 0.38, 0)
 	mainText.AnchorPoint = Vector2.new(0.5, 0.5)
 	mainText.BackgroundTransparency = 1
-	mainText.Text = "Auto Farm Chest"
+	mainText.Text = "Thon Hub"
 	mainText.TextColor3 = Color3.fromRGB(240, 240, 240)
 	mainText.TextSize = 42
 	mainText.Font = Enum.Font.GothamBold
@@ -156,7 +156,7 @@ local function createGui()
 	creditText.Position = UDim2.new(0.5, 0, 0.7, 0)
 	creditText.AnchorPoint = Vector2.new(0.5, 0.5)
 	creditText.BackgroundTransparency = 1
-	creditText.Text = "made by VuongDacThong"
+	creditText.Text = "farm tiền"
 	creditText.TextColor3 = Color3.fromRGB(150, 150, 150)
 	creditText.TextSize = 20
 	creditText.Font = Enum.Font.Gotham
