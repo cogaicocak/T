@@ -5,6 +5,7 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
 
 -- Variables
 local LocalPlayer = Players.LocalPlayer
@@ -15,12 +16,14 @@ local NoChestTime = 0
 local NoChestThreshold = 3
 local HasTeleported = false
 local RetryDelay = 0.5
+local CurrentServerId = game.JobId -- Lưu server hiện tại
+local TriedServers = {[game.JobId] = true} -- Danh sách server đã thử (bao gồm server hiện tại)
 
--- 🆕 Chest Timeout Configuration
+-- Chest Timeout Configuration
 local CurrentChest = nil
 local ChestStuckTime = 0
-local ChestTimeoutThreshold = 5 -- Nếu bị kẹt quá 5 giây thì coi như đã lụm
-local CollectedChests = {} -- Danh sách chest đã lụm (hoặc bị kẹt)
+local ChestTimeoutThreshold = 5
+local CollectedChests = {}
 
 local function getCharacter()
 	if not LocalPlayer.Character then
@@ -30,7 +33,7 @@ local function getCharacter()
 	return LocalPlayer.Character
 end
 
--- Create GUI (ĐÃ BỎ STATUS)
+-- Create GUI
 local function createGui()
 	local oldGui = LocalPlayer.PlayerGui:FindFirstChild("ChestFarmGUI")
 	if oldGui then
@@ -272,11 +275,92 @@ local function createGui()
 		end
 	end)
 
-	print("✅ Pure Monochrome GUI loaded!")
+	print("✅ GUI Loaded!")
 	return gui, mainText
 end
 
--- 🆕 Check if chest is already collected
+-- 🆕 Tìm server mới không trùng server đã thử
+local function findAndTeleportNewServer()
+	task.spawn(function()
+		local attemptCount = 0
+		
+		while true do
+			attemptCount = attemptCount + 1
+			print("🔄 Finding new server... attempt #" .. attemptCount)
+			
+			local success, result = pcall(function()
+				-- Lấy danh sách server qua API Roblox
+				local response = HttpService:JSONDecode(
+					game:HttpGet("https://games.roblox.com/v1/games/" .. NEXT_PLACE_ID .. "/servers/Public?sortOrder=Asc&limit=100")
+				)
+				
+				if response and response.data then
+					-- Lọc ra server chưa thử
+					local validServers = {}
+					for _, server in ipairs(response.data) do
+						if not TriedServers[server.id] and server.playing < server.maxPlayers then
+							table.insert(validServers, server)
+						end
+					end
+					
+					if #validServers > 0 then
+						-- Chọn server ngẫu nhiên từ danh sách hợp lệ
+						local chosenServer = validServers[math.random(1, #validServers)]
+						
+						-- Đánh dấu server này đã thử
+						TriedServers[chosenServer.id] = true
+						
+						print("✅ Found valid server: " .. chosenServer.id .. " (" .. chosenServer.playing .. "/" .. chosenServer.maxPlayers .. " players)")
+						
+						-- Teleport đến server cụ thể đó
+						TeleportService:TeleportToPlaceInstance(NEXT_PLACE_ID, chosenServer.id, LocalPlayer)
+					else
+						warn("⚠️ No valid servers found, retrying...")
+					end
+				end
+			end)
+			
+			if not success then
+				warn("❌ Error finding server: " .. tostring(result))
+				-- Fallback: dùng teleport thường nếu API fail
+				pcall(function()
+					TeleportService:Teleport(NEXT_PLACE_ID, LocalPlayer)
+				end)
+			end
+			
+			task.wait(RetryDelay)
+		end
+	end)
+end
+
+-- Teleport to next place
+local function TeleportToNextPlace()
+	if HasTeleported then return end
+	HasTeleported = true
+	
+	print("⚠️ No chests remaining. Searching for new server...")
+	findAndTeleportNewServer()
+end
+
+-- Auto Reconnect
+local function setupAutoReconnect()
+	game:GetService("CoreGui").RobloxPromptGui.promptOverlay.ChildAdded:Connect(function(prompt)
+		if prompt.Name == "ErrorPrompt" or prompt.Name == "ConnectionErrorPrompt" then
+			print("⚠️ Kicked! Reconnecting to new server...")
+			task.wait(RetryDelay)
+			findAndTeleportNewServer()
+		end
+	end)
+	
+	TeleportService.TeleportInitFailed:Connect(function(player, result, errorMessage)
+		warn("❌ Teleport failed: " .. tostring(result) .. " - " .. tostring(errorMessage))
+		warn("🔄 Retrying with different server...")
+		HasTeleported = false
+		TeleportToNextPlace()
+	end)
+end
+
+-- Check if chest is collected
 local function isChestCollected(chest)
 	for _, collectedChest in ipairs(CollectedChests) do
 		if collectedChest == chest then
@@ -286,11 +370,11 @@ local function isChestCollected(chest)
 	return false
 end
 
--- 🆕 Mark chest as collected
+-- Mark chest as collected
 local function markChestAsCollected(chest)
 	if not isChestCollected(chest) then
 		table.insert(CollectedChests, chest)
-		print("✅ Marked chest as collected: " .. chest.Name .. " (Total: " .. #CollectedChests .. ")")
+		print("✅ Chest marked as collected: " .. chest.Name .. " (Total: " .. #CollectedChests .. ")")
 	end
 end
 
@@ -309,7 +393,6 @@ local function getChestsSorted()
 
 	local Chests = {}
 	for _, Chest in pairs(UncheckedChests) do
-		-- Chỉ lấy chest có TouchInterest VÀ chưa được collected
 		if Chest:FindFirstChild("TouchInterest") and not isChestCollected(Chest) then
 			table.insert(Chests, Chest)
 		end
@@ -339,7 +422,7 @@ local function toggleNoclip(Toggle)
 	end)
 end
 
--- Teleport
+-- Teleport to chest
 local function Teleport(Goal)
 	pcall(function()
 		local RootPart = getCharacter().HumanoidRootPart
@@ -349,60 +432,7 @@ local function Teleport(Goal)
 	end)
 end
 
--- Auto Retry Teleport
-local function TeleportToNextPlace()
-	if HasTeleported then return end
-	HasTeleported = true
-	
-	print("⚠️ No chests remaining. Starting auto-retry teleport...")
-	
-	task.spawn(function()
-		local attemptCount = 0
-		while true do
-			attemptCount = attemptCount + 1
-			print("🔄 Teleport attempt #" .. attemptCount .. " to PlaceId: " .. NEXT_PLACE_ID)
-			
-			local success, errorMsg = pcall(function()
-				TeleportService:Teleport(NEXT_PLACE_ID, LocalPlayer)
-			end)
-			
-			if not success then
-				warn("❌ Teleport failed: " .. tostring(errorMsg))
-			end
-			
-			task.wait(RetryDelay)
-		end
-	end)
-end
-
--- Auto Reconnect
-local function setupAutoReconnect()
-	game:GetService("CoreGui").RobloxPromptGui.promptOverlay.ChildAdded:Connect(function(prompt)
-		if prompt.Name == "ErrorPrompt" or prompt.Name == "ConnectionErrorPrompt" then
-			print("⚠️ Detected kick/disconnect! Auto reconnecting...")
-			task.wait(RetryDelay)
-			
-			task.spawn(function()
-				local reconnectCount = 0
-				while true do
-					reconnectCount = reconnectCount + 1
-					print("🔄 Reconnect attempt #" .. reconnectCount)
-					pcall(function()
-						TeleportService:Teleport(game.PlaceId, LocalPlayer)
-					end)
-					task.wait(RetryDelay)
-				end
-			end)
-		end
-	end)
-	
-	TeleportService.TeleportInitFailed:Connect(function(player, result, errorMessage)
-		warn("❌ Teleport failed! Result: " .. tostring(result))
-		warn("❌ Error: " .. tostring(errorMessage))
-	end)
-end
-
--- 🆕 Main farm loop với timeout detection
+-- Main farm loop
 local function startFarm()
 	task.spawn(function()
 		while task.wait() do
@@ -412,34 +442,28 @@ local function startFarm()
 				if #Chests > 0 then
 					NoChestTime = 0
 					local targetChest = Chests[1]
-					
-					-- Check if we're stuck on the same chest
+
 					if CurrentChest == targetChest then
 						ChestStuckTime = ChestStuckTime + 0.03
-						
+
 						if ChestStuckTime >= ChestTimeoutThreshold then
-							-- Coi như đã lụm chest này
 							markChestAsCollected(targetChest)
-							warn("⏱️ Chest timeout after " .. ChestTimeoutThreshold .. "s, marking as collected: " .. targetChest.Name)
-							
-							-- Reset
+							warn("⏱️ Timeout! Marked as collected: " .. targetChest.Name)
 							CurrentChest = nil
 							ChestStuckTime = 0
 							return
 						end
 					else
-						-- New chest, reset timer
 						CurrentChest = targetChest
 						ChestStuckTime = 0
 					end
-					
+
 					Teleport(targetChest.CFrame)
 				else
-					-- Không còn chest nào
 					NoChestTime = NoChestTime + 0.03
 					CurrentChest = nil
 					ChestStuckTime = 0
-					
+
 					if NoChestTime >= NoChestThreshold then
 						TeleportToNextPlace()
 					end
@@ -466,13 +490,13 @@ LocalPlayer.CharacterAdded:Connect(function()
 	HasTeleported = false
 	CurrentChest = nil
 	ChestStuckTime = 0
-	-- KHÔNG reset CollectedChests - giữ nguyên danh sách đã lụm
 	print("🔄 Character respawned")
 	pcall(startFarm)
 end)
 
 -- Initialize
-print("🚀 Starting Auto Chest Farm with Timeout Detection...")
+print("🚀 Starting Auto Chest Farm...")
+print("📍 Current Server ID: " .. game.JobId)
 pcall(function()
 	createGui()
 	setupAutoReconnect()
