@@ -11,7 +11,7 @@ local HttpService = game:GetService("HttpService")
 local LocalPlayer = Players.LocalPlayer
 
 -- Teleport Configuration
-local NEXT_PLACE_ID = 100117331123089
+local NEXT_PLACE_ID = game.PlaceId
 local NoChestTime = 0
 local NoChestThreshold = 3
 local HasTeleported = false
