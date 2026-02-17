@@ -156,7 +156,7 @@ local function createGui()
 	creditText.Position = UDim2.new(0.5, 0, 0.7, 0)
 	creditText.AnchorPoint = Vector2.new(0.5, 0.5)
 	creditText.BackgroundTransparency = 1
-	creditText.Text = '\ "Trăng kia ai nặn mà tròn\nlồn em ai địt mà mòn một bên\"'
+	creditText.Text = '\ "Trăng kia ai nặn mà tròn\nLồn em ai địt mà mòn một bên\"'
 	creditText.TextColor3 = Color3.fromRGB(150, 150, 150)
 	creditText.TextSize = 20
 	creditText.Font = Enum.Font.Gotham
