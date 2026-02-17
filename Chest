@@ -14,11 +14,7 @@ local NEXT_PLACE_ID = 100117331123089
 local NoChestTime = 0
 local NoChestThreshold = 3
 local HasTeleported = false
-local RetryDelay = 0.5
-
--- Status tracking
-local CurrentStatus = "Initializing..."
-local StatusLabel -- Will be set in createGui
+local RetryDelay = 0.5 -- Spam mỗi 0.5 giây
 
 local function getCharacter()
 	if not LocalPlayer.Character then
@@ -28,16 +24,7 @@ local function getCharacter()
 	return LocalPlayer.Character
 end
 
--- Function to update status
-local function updateStatus(newStatus)
-	CurrentStatus = newStatus
-	if StatusLabel then
-		StatusLabel.Text = "Status: " .. newStatus
-		print("📊 " .. newStatus)
-	end
-end
-
--- Create GUI với Status Display
+-- Create GUI với hiệu ứng MONOCHROME
 local function createGui()
 	local oldGui = LocalPlayer.PlayerGui:FindFirstChild("ChestFarmGUI")
 	if oldGui then
@@ -64,7 +51,7 @@ local function createGui()
 	local container = Instance.new("Frame")
 	container.Name = "Container"
 	container.Parent = background
-	container.Size = UDim2.new(0, 550, 0, 230)
+	container.Size = UDim2.new(0, 500, 0, 200)
 	container.Position = UDim2.new(0.5, 0, 0.5, 0)
 	container.AnchorPoint = Vector2.new(0.5, 0.5)
 	container.BackgroundTransparency = 1
@@ -107,7 +94,7 @@ local function createGui()
 	topLine.Name = "TopLine"
 	topLine.Parent = contentFrame
 	topLine.Size = UDim2.new(0, 0, 0, 2)
-	topLine.Position = UDim2.new(0.5, 0, 0.13, 0)
+	topLine.Position = UDim2.new(0.5, 0, 0.15, 0)
 	topLine.AnchorPoint = Vector2.new(0.5, 0.5)
 	topLine.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
 	topLine.BorderSizePixel = 0
@@ -121,12 +108,11 @@ local function createGui()
 	})
 	topGradient.Parent = topLine
 
-	-- Main text
 	local mainText = Instance.new("TextLabel")
 	mainText.Name = "MainText"
 	mainText.Parent = contentFrame
-	mainText.Size = UDim2.new(0.9, 0, 0.28, 0)
-	mainText.Position = UDim2.new(0.5, 0, 0.32, 0)
+	mainText.Size = UDim2.new(0.9, 0, 0.35, 0)
+	mainText.Position = UDim2.new(0.5, 0, 0.38, 0)
 	mainText.AnchorPoint = Vector2.new(0.5, 0.5)
 	mainText.BackgroundTransparency = 1
 	mainText.Text = "Auto Farm Chest"
@@ -138,12 +124,11 @@ local function createGui()
 	mainText.TextYAlignment = Enum.TextYAlignment.Center
 	mainText.ZIndex = 3
 
-	-- Shadow text
 	local shadowText = Instance.new("TextLabel")
 	shadowText.Name = "ShadowText"
 	shadowText.Parent = contentFrame
 	shadowText.Size = mainText.Size
-	shadowText.Position = UDim2.new(0.5, 2, 0.32, 2)
+	shadowText.Position = UDim2.new(0.5, 2, 0.38, 2)
 	shadowText.AnchorPoint = Vector2.new(0.5, 0.5)
 	shadowText.BackgroundTransparency = 1
 	shadowText.Text = mainText.Text
@@ -155,47 +140,27 @@ local function createGui()
 	shadowText.TextYAlignment = Enum.TextYAlignment.Center
 	shadowText.ZIndex = 2
 
-	-- STATUS LABEL
-	local statusLabel = Instance.new("TextLabel")
-	statusLabel.Name = "StatusLabel"
-	statusLabel.Parent = contentFrame
-	statusLabel.Size = UDim2.new(0.9, 0, 0.18, 0)
-	statusLabel.Position = UDim2.new(0.5, 0, 0.58, 0)
-	statusLabel.AnchorPoint = Vector2.new(0.5, 0.5)
-	statusLabel.BackgroundTransparency = 1
-	statusLabel.Text = "Status: " .. CurrentStatus
-	statusLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
-	statusLabel.TextSize = 18
-	statusLabel.Font = Enum.Font.GothamMedium
-	statusLabel.TextTransparency = 1
-	statusLabel.TextXAlignment = Enum.TextXAlignment.Center
-	statusLabel.TextYAlignment = Enum.TextYAlignment.Center
-	statusLabel.ZIndex = 3
-	StatusLabel = statusLabel
-
-	-- Credit text
 	local creditText = Instance.new("TextLabel")
 	creditText.Name = "CreditText"
 	creditText.Parent = contentFrame
-	creditText.Size = UDim2.new(0.9, 0, 0.15, 0)
-	creditText.Position = UDim2.new(0.5, 0, 0.78, 0)
+	creditText.Size = UDim2.new(0.9, 0, 0.2, 0)
+	creditText.Position = UDim2.new(0.5, 0, 0.7, 0)
 	creditText.AnchorPoint = Vector2.new(0.5, 0.5)
 	creditText.BackgroundTransparency = 1
 	creditText.Text = "made by VuongDacThong"
 	creditText.TextColor3 = Color3.fromRGB(150, 150, 150)
-	creditText.TextSize = 18
+	creditText.TextSize = 20
 	creditText.Font = Enum.Font.Gotham
 	creditText.TextTransparency = 1
 	creditText.TextXAlignment = Enum.TextXAlignment.Center
 	creditText.TextYAlignment = Enum.TextYAlignment.Center
 	creditText.ZIndex = 3
 
-	-- Decorative dots
 	local dotsContainer = Instance.new("Frame")
 	dotsContainer.Name = "DotsContainer"
 	dotsContainer.Parent = contentFrame
 	dotsContainer.Size = UDim2.new(0.2, 0, 0.05, 0)
-	dotsContainer.Position = UDim2.new(0.5, 0, 0.92, 0)
+	dotsContainer.Position = UDim2.new(0.5, 0, 0.88, 0)
 	dotsContainer.AnchorPoint = Vector2.new(0.5, 0.5)
 	dotsContainer.BackgroundTransparency = 1
 	dotsContainer.ZIndex = 3
@@ -216,9 +181,7 @@ local function createGui()
 		dotCorner.Parent = dot
 	end
 
-	-- ===== ANIMATIONS =====
-
-	-- Fade In
+	-- Animations
 	task.spawn(function()
 		local fadeInfo = TweenInfo.new(1.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 		TweenService:Create(background, fadeInfo, { BackgroundTransparency = 0.4 }):Play()
@@ -228,11 +191,9 @@ local function createGui()
 		TweenService:Create(mainText, fadeInfo, { TextTransparency = 0 }):Play()
 		TweenService:Create(shadowText, fadeInfo, { TextTransparency = 0.8 }):Play()
 		task.wait(0.2)
-		TweenService:Create(statusLabel, fadeInfo, { TextTransparency = 0.3 }):Play()
 		TweenService:Create(creditText, fadeInfo, { TextTransparency = 0.4 }):Play()
 	end)
 
-	-- Glow Pulse
 	task.spawn(function()
 		task.wait(1)
 		while glowFrame and glowFrame.Parent do
@@ -243,7 +204,6 @@ local function createGui()
 		end
 	end)
 
-	-- Top Line Expand
 	task.spawn(function()
 		task.wait(0.8)
 		TweenService:Create(topLine, TweenInfo.new(1.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), { Size = UDim2.new(0.6, 0, 0, 2) }):Play()
@@ -256,7 +216,6 @@ local function createGui()
 		end
 	end)
 
-	-- Text Breathing
 	task.spawn(function()
 		task.wait(2)
 		while mainText and mainText.Parent do
@@ -267,7 +226,6 @@ local function createGui()
 		end
 	end)
 
-	-- Dots Animation
 	task.spawn(function()
 		task.wait(1.5)
 		local dots = dotsContainer:GetChildren()
@@ -288,7 +246,6 @@ local function createGui()
 		end
 	end)
 
-	-- Border Glow
 	task.spawn(function()
 		task.wait(2.5)
 		while borderStroke and borderStroke.Parent do
@@ -299,7 +256,6 @@ local function createGui()
 		end
 	end)
 
-	-- Credit Fade
 	task.spawn(function()
 		task.wait(3)
 		while creditText and creditText.Parent do
@@ -310,7 +266,7 @@ local function createGui()
 		end
 	end)
 
-	print("✅ GUI with Status Display Loaded!")
+	print("✅ Monochrome GUI Loaded!")
 	return gui, mainText
 end
 
@@ -319,13 +275,11 @@ local UncheckedChests, FirstRun = {}, true
 local function getChestsSorted()
 	if FirstRun then
 		FirstRun = false
-		updateStatus("Scanning for chests...")
 		for _, Object in pairs(game:GetDescendants()) do
 			if Object.Name:find("Chest") and Object.ClassName == "Part" then
 				table.insert(UncheckedChests, Object)
 			end
 		end
-		updateStatus("Found " .. #UncheckedChests .. " total chests")
 	end
 
 	local Chests = {}
@@ -369,44 +323,47 @@ local function Teleport(Goal)
 	end)
 end
 
--- Auto Retry Teleport
+-- 🆕 AUTO RETRY TELEPORT (Spam mỗi 0.5s khi server full hoặc bị kick)
 local function TeleportToNextPlace()
 	if HasTeleported then return end
 	HasTeleported = true
 	
-	updateStatus("Teleporting to next place...")
+	print("⚠️ No chests for " .. NoChestThreshold .. "s. Starting auto-retry teleport...")
 	
+	-- Spam teleport mỗi 0.5 giây cho đến khi thành công
 	task.spawn(function()
 		local attemptCount = 0
 		while true do
 			attemptCount = attemptCount + 1
-			updateStatus("Teleport attempt #" .. attemptCount)
 			
 			local success, errorMsg = pcall(function()
+				print("🔄 Teleport attempt #" .. attemptCount .. " to PlaceId: " .. NEXT_PLACE_ID)
 				TeleportService:Teleport(NEXT_PLACE_ID, LocalPlayer)
 			end)
 			
 			if not success then
-				updateStatus("Failed! Retrying... (" .. attemptCount .. ")")
+				warn("❌ Teleport failed: " .. tostring(errorMsg))
+				warn("⏳ Retrying in " .. RetryDelay .. " seconds...")
+			else
+				print("✅ Teleport request sent successfully!")
 			end
 			
-			task.wait(RetryDelay)
+			task.wait(RetryDelay) -- Đợi 0.5 giây rồi thử lại
 		end
 	end)
 end
 
--- Auto Reconnect
+-- 🆕 AUTO RECONNECT khi bị kick
 local function setupAutoReconnect()
+	-- Detect khi bị kick
 	game:GetService("CoreGui").RobloxPromptGui.promptOverlay.ChildAdded:Connect(function(prompt)
 		if prompt.Name == "ErrorPrompt" or prompt.Name == "ConnectionErrorPrompt" then
-			updateStatus("Kicked! Reconnecting...")
+			print("⚠️ Detected kick/disconnect! Auto reconnecting...")
 			task.wait(RetryDelay)
 			
+			-- Spam rejoin
 			task.spawn(function()
-				local reconnectCount = 0
 				while true do
-					reconnectCount = reconnectCount + 1
-					updateStatus("Reconnect attempt #" .. reconnectCount)
 					pcall(function()
 						TeleportService:Teleport(game.PlaceId, LocalPlayer)
 					end)
@@ -416,8 +373,11 @@ local function setupAutoReconnect()
 		end
 	end)
 	
+	-- Backup: Listen to TeleportService failed events
 	TeleportService.TeleportInitFailed:Connect(function(player, result, errorMessage)
-		updateStatus("Teleport failed: " .. tostring(result))
+		warn("❌ Teleport failed! Result: " .. tostring(result))
+		warn("❌ Error: " .. tostring(errorMessage))
+		warn("⏳ Auto-retrying in " .. RetryDelay .. "s...")
 	end)
 end
 
@@ -430,11 +390,9 @@ local function startFarm()
 
 				if #Chests > 0 then
 					NoChestTime = 0
-					updateStatus("Farming chest (" .. #Chests .. " remaining)")
 					Teleport(Chests[1].CFrame)
 				else
 					NoChestTime = NoChestTime + 0.03
-					updateStatus("No chests found... (" .. math.floor(NoChestTime) .. "s)")
 					if NoChestTime >= NoChestThreshold then
 						TeleportToNextPlace()
 					end
@@ -459,17 +417,13 @@ LocalPlayer.CharacterAdded:Connect(function()
 	task.wait(1)
 	NoChestTime = 0
 	HasTeleported = false
-	updateStatus("Character respawned")
 	pcall(startFarm)
 end)
 
 -- Initialize
-print("🚀 Starting Auto Chest Farm with Status Display...")
-updateStatus("Initializing...")
+print("🚀 Starting Auto Chest Farm with Auto-Retry Teleport...")
 pcall(function()
 	createGui()
-	setupAutoReconnect()
-	task.wait(1)
-	updateStatus("Starting farm...")
+	setupAutoReconnect() -- 🆕 Bật auto reconnect
 	startFarm()
 end)
