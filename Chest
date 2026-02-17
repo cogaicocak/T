@@ -156,7 +156,7 @@ local function createGui()
 	creditText.Position = UDim2.new(0.5, 0, 0.7, 0)
 	creditText.AnchorPoint = Vector2.new(0.5, 0.5)
 	creditText.BackgroundTransparency = 1
-	creditText.Text = "farm tiền"
+	creditText.Text = "farm tien"
 	creditText.TextColor3 = Color3.fromRGB(150, 150, 150)
 	creditText.TextSize = 20
 	creditText.Font = Enum.Font.Gotham
@@ -275,7 +275,6 @@ local function createGui()
 		end
 	end)
 
-	print("✅ GUI Loaded!")
 	return gui, mainText
 end
 
@@ -286,7 +285,6 @@ local function findAndTeleportNewServer()
 		
 		while true do
 			attemptCount = attemptCount + 1
-			print("🔄 Finding new server... attempt #" .. attemptCount)
 			
 			local success, result = pcall(function()
 				-- Lấy danh sách server qua API Roblox
@@ -310,18 +308,15 @@ local function findAndTeleportNewServer()
 						-- Đánh dấu server này đã thử
 						TriedServers[chosenServer.id] = true
 						
-						print("✅ Found valid server: " .. chosenServer.id .. " (" .. chosenServer.playing .. "/" .. chosenServer.maxPlayers .. " players)")
 						
 						-- Teleport đến server cụ thể đó
 						TeleportService:TeleportToPlaceInstance(NEXT_PLACE_ID, chosenServer.id, LocalPlayer)
 					else
-						warn("⚠️ No valid servers found, retrying...")
 					end
 				end
 			end)
 			
 			if not success then
-				warn("❌ Error finding server: " .. tostring(result))
 				-- Fallback: dùng teleport thường nếu API fail
 				pcall(function()
 					TeleportService:Teleport(NEXT_PLACE_ID, LocalPlayer)
@@ -338,7 +333,6 @@ local function TeleportToNextPlace()
 	if HasTeleported then return end
 	HasTeleported = true
 	
-	print("⚠️ No chests remaining. Searching for new server...")
 	findAndTeleportNewServer()
 end
 
@@ -346,15 +340,12 @@ end
 local function setupAutoReconnect()
 	game:GetService("CoreGui").RobloxPromptGui.promptOverlay.ChildAdded:Connect(function(prompt)
 		if prompt.Name == "ErrorPrompt" or prompt.Name == "ConnectionErrorPrompt" then
-			print("⚠️ Kicked! Reconnecting to new server...")
 			task.wait(RetryDelay)
 			findAndTeleportNewServer()
 		end
 	end)
 	
 	TeleportService.TeleportInitFailed:Connect(function(player, result, errorMessage)
-		warn("❌ Teleport failed: " .. tostring(result) .. " - " .. tostring(errorMessage))
-		warn("🔄 Retrying with different server...")
 		HasTeleported = false
 		TeleportToNextPlace()
 	end)
@@ -374,7 +365,6 @@ end
 local function markChestAsCollected(chest)
 	if not isChestCollected(chest) then
 		table.insert(CollectedChests, chest)
-		print("✅ Chest marked as collected: " .. chest.Name .. " (Total: " .. #CollectedChests .. ")")
 	end
 end
 
@@ -388,7 +378,6 @@ local function getChestsSorted()
 				table.insert(UncheckedChests, Object)
 			end
 		end
-		print("📦 Found " .. #UncheckedChests .. " total chests")
 	end
 
 	local Chests = {}
@@ -448,7 +437,6 @@ local function startFarm()
 
 						if ChestStuckTime >= ChestTimeoutThreshold then
 							markChestAsCollected(targetChest)
-							warn("⏱️ Timeout! Marked as collected: " .. targetChest.Name)
 							CurrentChest = nil
 							ChestStuckTime = 0
 							return
@@ -490,13 +478,10 @@ LocalPlayer.CharacterAdded:Connect(function()
 	HasTeleported = false
 	CurrentChest = nil
 	ChestStuckTime = 0
-	print("🔄 Character respawned")
 	pcall(startFarm)
 end)
 
 -- Initialize
-print("🚀 Starting Auto Chest Farm...")
-print("📍 Current Server ID: " .. game.JobId)
 pcall(function()
 	createGui()
 	setupAutoReconnect()
