@@ -16,15 +16,9 @@ local NoChestThreshold = 3
 local HasTeleported = false
 local RetryDelay = 0.5
 
--- 🆕 Chest Timeout Configuration
-local CurrentChest = nil
-local ChestStuckTime = 0
-local ChestTimeoutThreshold = 5 -- Nếu застряв quá 5 giây thì skip
-local SkippedChests = {} -- Danh sách chest đã skip
-
 -- Status tracking
 local CurrentStatus = "Initializing..."
-local StatusLabel
+local StatusLabel -- Will be set in createGui
 
 local function getCharacter()
 	if not LocalPlayer.Character then
@@ -127,6 +121,7 @@ local function createGui()
 	})
 	topGradient.Parent = topLine
 
+	-- Main text
 	local mainText = Instance.new("TextLabel")
 	mainText.Name = "MainText"
 	mainText.Parent = contentFrame
@@ -143,6 +138,7 @@ local function createGui()
 	mainText.TextYAlignment = Enum.TextYAlignment.Center
 	mainText.ZIndex = 3
 
+	-- Shadow text
 	local shadowText = Instance.new("TextLabel")
 	shadowText.Name = "ShadowText"
 	shadowText.Parent = contentFrame
@@ -159,6 +155,7 @@ local function createGui()
 	shadowText.TextYAlignment = Enum.TextYAlignment.Center
 	shadowText.ZIndex = 2
 
+	-- STATUS LABEL
 	local statusLabel = Instance.new("TextLabel")
 	statusLabel.Name = "StatusLabel"
 	statusLabel.Parent = contentFrame
@@ -176,6 +173,7 @@ local function createGui()
 	statusLabel.ZIndex = 3
 	StatusLabel = statusLabel
 
+	-- Credit text
 	local creditText = Instance.new("TextLabel")
 	creditText.Name = "CreditText"
 	creditText.Parent = contentFrame
@@ -192,6 +190,7 @@ local function createGui()
 	creditText.TextYAlignment = Enum.TextYAlignment.Center
 	creditText.ZIndex = 3
 
+	-- Decorative dots
 	local dotsContainer = Instance.new("Frame")
 	dotsContainer.Name = "DotsContainer"
 	dotsContainer.Parent = contentFrame
@@ -217,7 +216,9 @@ local function createGui()
 		dotCorner.Parent = dot
 	end
 
-	-- Animations
+	-- ===== ANIMATIONS =====
+
+	-- Fade In
 	task.spawn(function()
 		local fadeInfo = TweenInfo.new(1.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 		TweenService:Create(background, fadeInfo, { BackgroundTransparency = 0.4 }):Play()
@@ -231,6 +232,7 @@ local function createGui()
 		TweenService:Create(creditText, fadeInfo, { TextTransparency = 0.4 }):Play()
 	end)
 
+	-- Glow Pulse
 	task.spawn(function()
 		task.wait(1)
 		while glowFrame and glowFrame.Parent do
@@ -241,6 +243,7 @@ local function createGui()
 		end
 	end)
 
+	-- Top Line Expand
 	task.spawn(function()
 		task.wait(0.8)
 		TweenService:Create(topLine, TweenInfo.new(1.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), { Size = UDim2.new(0.6, 0, 0, 2) }):Play()
@@ -253,6 +256,7 @@ local function createGui()
 		end
 	end)
 
+	-- Text Breathing
 	task.spawn(function()
 		task.wait(2)
 		while mainText and mainText.Parent do
@@ -263,6 +267,7 @@ local function createGui()
 		end
 	end)
 
+	-- Dots Animation
 	task.spawn(function()
 		task.wait(1.5)
 		local dots = dotsContainer:GetChildren()
@@ -283,6 +288,7 @@ local function createGui()
 		end
 	end)
 
+	-- Border Glow
 	task.spawn(function()
 		task.wait(2.5)
 		while borderStroke and borderStroke.Parent do
@@ -293,6 +299,7 @@ local function createGui()
 		end
 	end)
 
+	-- Credit Fade
 	task.spawn(function()
 		task.wait(3)
 		while creditText and creditText.Parent do
@@ -305,16 +312,6 @@ local function createGui()
 
 	print("✅ GUI with Status Display Loaded!")
 	return gui, mainText
-end
-
--- 🆕 Check if chest should be skipped
-local function shouldSkipChest(chest)
-	for _, skippedChest in ipairs(SkippedChests) do
-		if skippedChest == chest then
-			return true
-		end
-	end
-	return false
 end
 
 -- Chest detection
@@ -333,7 +330,7 @@ local function getChestsSorted()
 
 	local Chests = {}
 	for _, Chest in pairs(UncheckedChests) do
-		if Chest:FindFirstChild("TouchInterest") and not shouldSkipChest(Chest) then
+		if Chest:FindFirstChild("TouchInterest") then
 			table.insert(Chests, Chest)
 		end
 	end
@@ -424,7 +421,7 @@ local function setupAutoReconnect()
 	end)
 end
 
--- Main farm loop với timeout detection
+-- Main farm loop
 local function startFarm()
 	task.spawn(function()
 		while task.wait() do
@@ -433,38 +430,10 @@ local function startFarm()
 
 				if #Chests > 0 then
 					NoChestTime = 0
-					local targetChest = Chests[1]
-					
-					-- 🆕 Check if we're stuck on the same chest
-					if CurrentChest == targetChest then
-						ChestStuckTime = ChestStuckTime + 0.03
-						
-						if ChestStuckTime >= ChestTimeoutThreshold then
-							-- Skip this chest
-							table.insert(SkippedChests, targetChest)
-							updateStatus("⚠️ Chest stuck! Skipping... (" .. #SkippedChests .. " skipped)")
-							warn("⚠️ Skipped chest after " .. ChestTimeoutThreshold .. "s: " .. targetChest.Name)
-							
-							-- Reset
-							CurrentChest = nil
-							ChestStuckTime = 0
-							return
-						end
-						
-						updateStatus("Farming chest (" .. #Chests .. " remaining, " .. math.floor(ChestStuckTime) .. "s)")
-					else
-						-- New chest, reset timer
-						CurrentChest = targetChest
-						ChestStuckTime = 0
-						updateStatus("Farming chest (" .. #Chests .. " remaining)")
-					end
-					
-					Teleport(targetChest.CFrame)
+					updateStatus("Farming chest (" .. #Chests .. " remaining)")
+					Teleport(Chests[1].CFrame)
 				else
 					NoChestTime = NoChestTime + 0.03
-					CurrentChest = nil
-					ChestStuckTime = 0
-					
 					updateStatus("No chests found... (" .. math.floor(NoChestTime) .. "s)")
 					if NoChestTime >= NoChestThreshold then
 						TeleportToNextPlace()
@@ -490,15 +459,12 @@ LocalPlayer.CharacterAdded:Connect(function()
 	task.wait(1)
 	NoChestTime = 0
 	HasTeleported = false
-	CurrentChest = nil
-	ChestStuckTime = 0
-	SkippedChests = {} -- Reset skipped chests khi respawn
 	updateStatus("Character respawned")
 	pcall(startFarm)
 end)
 
 -- Initialize
-print("🚀 Starting Auto Chest Farm with Timeout Detection...")
+print("🚀 Starting Auto Chest Farm with Status Display...")
 updateStatus("Initializing...")
 pcall(function()
 	createGui()
