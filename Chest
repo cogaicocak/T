@@ -14,7 +14,13 @@ local NEXT_PLACE_ID = 100117331123089
 local NoChestTime = 0
 local NoChestThreshold = 3
 local HasTeleported = false
-local RetryDelay = 0.5 -- Spam mỗi 0.5 giây
+local RetryDelay = 0.5
+
+-- 🆕 Chest Timeout Configuration
+local CurrentChest = nil
+local ChestStuckTime = 0
+local ChestTimeoutThreshold = 5 -- Nếu bị kẹt quá 5 giây thì coi như đã lụm
+local CollectedChests = {} -- Danh sách chest đã lụm (hoặc bị kẹt)
 
 local function getCharacter()
 	if not LocalPlayer.Character then
@@ -24,7 +30,7 @@ local function getCharacter()
 	return LocalPlayer.Character
 end
 
--- Create GUI với hiệu ứng MONOCHROME
+-- Create GUI (ĐÃ BỎ STATUS)
 local function createGui()
 	local oldGui = LocalPlayer.PlayerGui:FindFirstChild("ChestFarmGUI")
 	if oldGui then
@@ -111,7 +117,7 @@ local function createGui()
 	local mainText = Instance.new("TextLabel")
 	mainText.Name = "MainText"
 	mainText.Parent = contentFrame
-	mainText.Size = UDim2.new(0.9, 0, 0.35, 0)
+	mainText.Size = UDim2.new(0.9, 0, 0.5, 0)
 	mainText.Position = UDim2.new(0.5, 0, 0.38, 0)
 	mainText.AnchorPoint = Vector2.new(0.5, 0.5)
 	mainText.BackgroundTransparency = 1
@@ -143,7 +149,7 @@ local function createGui()
 	local creditText = Instance.new("TextLabel")
 	creditText.Name = "CreditText"
 	creditText.Parent = contentFrame
-	creditText.Size = UDim2.new(0.9, 0, 0.2, 0)
+	creditText.Size = UDim2.new(0.9, 0, 0.3, 0)
 	creditText.Position = UDim2.new(0.5, 0, 0.7, 0)
 	creditText.AnchorPoint = Vector2.new(0.5, 0.5)
 	creditText.BackgroundTransparency = 1
@@ -266,8 +272,26 @@ local function createGui()
 		end
 	end)
 
-	print("✅ Monochrome GUI Loaded!")
+	print("✅ Pure Monochrome GUI loaded!")
 	return gui, mainText
+end
+
+-- 🆕 Check if chest is already collected
+local function isChestCollected(chest)
+	for _, collectedChest in ipairs(CollectedChests) do
+		if collectedChest == chest then
+			return true
+		end
+	end
+	return false
+end
+
+-- 🆕 Mark chest as collected
+local function markChestAsCollected(chest)
+	if not isChestCollected(chest) then
+		table.insert(CollectedChests, chest)
+		print("✅ Marked chest as collected: " .. chest.Name .. " (Total: " .. #CollectedChests .. ")")
+	end
 end
 
 -- Chest detection
@@ -280,11 +304,13 @@ local function getChestsSorted()
 				table.insert(UncheckedChests, Object)
 			end
 		end
+		print("📦 Found " .. #UncheckedChests .. " total chests")
 	end
 
 	local Chests = {}
 	for _, Chest in pairs(UncheckedChests) do
-		if Chest:FindFirstChild("TouchInterest") then
+		-- Chỉ lấy chest có TouchInterest VÀ chưa được collected
+		if Chest:FindFirstChild("TouchInterest") and not isChestCollected(Chest) then
 			table.insert(Chests, Chest)
 		end
 	end
@@ -323,47 +349,44 @@ local function Teleport(Goal)
 	end)
 end
 
--- 🆕 AUTO RETRY TELEPORT (Spam mỗi 0.5s khi server full hoặc bị kick)
+-- Auto Retry Teleport
 local function TeleportToNextPlace()
 	if HasTeleported then return end
 	HasTeleported = true
 	
-	print("⚠️ No chests for " .. NoChestThreshold .. "s. Starting auto-retry teleport...")
+	print("⚠️ No chests remaining. Starting auto-retry teleport...")
 	
-	-- Spam teleport mỗi 0.5 giây cho đến khi thành công
 	task.spawn(function()
 		local attemptCount = 0
 		while true do
 			attemptCount = attemptCount + 1
+			print("🔄 Teleport attempt #" .. attemptCount .. " to PlaceId: " .. NEXT_PLACE_ID)
 			
 			local success, errorMsg = pcall(function()
-				print("🔄 Teleport attempt #" .. attemptCount .. " to PlaceId: " .. NEXT_PLACE_ID)
 				TeleportService:Teleport(NEXT_PLACE_ID, LocalPlayer)
 			end)
 			
 			if not success then
 				warn("❌ Teleport failed: " .. tostring(errorMsg))
-				warn("⏳ Retrying in " .. RetryDelay .. " seconds...")
-			else
-				print("✅ Teleport request sent successfully!")
 			end
 			
-			task.wait(RetryDelay) -- Đợi 0.5 giây rồi thử lại
+			task.wait(RetryDelay)
 		end
 	end)
 end
 
--- 🆕 AUTO RECONNECT khi bị kick
+-- Auto Reconnect
 local function setupAutoReconnect()
-	-- Detect khi bị kick
 	game:GetService("CoreGui").RobloxPromptGui.promptOverlay.ChildAdded:Connect(function(prompt)
 		if prompt.Name == "ErrorPrompt" or prompt.Name == "ConnectionErrorPrompt" then
 			print("⚠️ Detected kick/disconnect! Auto reconnecting...")
 			task.wait(RetryDelay)
 			
-			-- Spam rejoin
 			task.spawn(function()
+				local reconnectCount = 0
 				while true do
+					reconnectCount = reconnectCount + 1
+					print("🔄 Reconnect attempt #" .. reconnectCount)
 					pcall(function()
 						TeleportService:Teleport(game.PlaceId, LocalPlayer)
 					end)
@@ -373,15 +396,13 @@ local function setupAutoReconnect()
 		end
 	end)
 	
-	-- Backup: Listen to TeleportService failed events
 	TeleportService.TeleportInitFailed:Connect(function(player, result, errorMessage)
 		warn("❌ Teleport failed! Result: " .. tostring(result))
 		warn("❌ Error: " .. tostring(errorMessage))
-		warn("⏳ Auto-retrying in " .. RetryDelay .. "s...")
 	end)
 end
 
--- Main farm loop
+-- 🆕 Main farm loop với timeout detection
 local function startFarm()
 	task.spawn(function()
 		while task.wait() do
@@ -390,9 +411,35 @@ local function startFarm()
 
 				if #Chests > 0 then
 					NoChestTime = 0
-					Teleport(Chests[1].CFrame)
+					local targetChest = Chests[1]
+					
+					-- Check if we're stuck on the same chest
+					if CurrentChest == targetChest then
+						ChestStuckTime = ChestStuckTime + 0.03
+						
+						if ChestStuckTime >= ChestTimeoutThreshold then
+							-- Coi như đã lụm chest này
+							markChestAsCollected(targetChest)
+							warn("⏱️ Chest timeout after " .. ChestTimeoutThreshold .. "s, marking as collected: " .. targetChest.Name)
+							
+							-- Reset
+							CurrentChest = nil
+							ChestStuckTime = 0
+							return
+						end
+					else
+						-- New chest, reset timer
+						CurrentChest = targetChest
+						ChestStuckTime = 0
+					end
+					
+					Teleport(targetChest.CFrame)
 				else
+					-- Không còn chest nào
 					NoChestTime = NoChestTime + 0.03
+					CurrentChest = nil
+					ChestStuckTime = 0
+					
 					if NoChestTime >= NoChestThreshold then
 						TeleportToNextPlace()
 					end
@@ -417,13 +464,17 @@ LocalPlayer.CharacterAdded:Connect(function()
 	task.wait(1)
 	NoChestTime = 0
 	HasTeleported = false
+	CurrentChest = nil
+	ChestStuckTime = 0
+	-- KHÔNG reset CollectedChests - giữ nguyên danh sách đã lụm
+	print("🔄 Character respawned")
 	pcall(startFarm)
 end)
 
 -- Initialize
-print("🚀 Starting Auto Chest Farm with Auto-Retry Teleport...")
+print("🚀 Starting Auto Chest Farm with Timeout Detection...")
 pcall(function()
 	createGui()
-	setupAutoReconnect() -- 🆕 Bật auto reconnect
+	setupAutoReconnect()
 	startFarm()
 end)
